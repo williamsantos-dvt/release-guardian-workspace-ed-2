@@ -1,0 +1,8 @@
+{
+  "releaseId": "checkout-api-4.8.2",
+  "releaseType": "standard",
+  "tests": { "passed": 428, "failed": 0 },
+  "coverage": 84,
+  "security": { "critical": 0, "high": 0 },
+  "lintErrors": 0
+}

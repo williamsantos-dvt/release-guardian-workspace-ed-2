@@ -1,0 +1,8 @@
+{
+  "releaseId": "legacy-cron-1.2.0",
+  "releaseType": "standard",
+  "tests": { "passed": 34, "failed": 0 },
+  "coverage": 63,
+  "security": { "critical": 0, "high": 0 },
+  "lintErrors": 0
+}

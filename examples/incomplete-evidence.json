@@ -1,0 +1,8 @@
+{
+  "releaseId": "internal-tool-0.1.0",
+  "releaseType": "standard",
+  "tests": { "passed": 12, "failed": 0 },
+  "coverage": null,
+  "security": { "critical": 0, "high": 0 },
+  "lintErrors": 0
+}

@@ -1,0 +1,8 @@
+{
+  "releaseId": "emergency-fix-221",
+  "releaseType": "hotfix",
+  "tests": { "passed": 130, "failed": 0 },
+  "coverage": 67,
+  "security": { "critical": 0, "high": 0 },
+  "lintErrors": 0
+}
