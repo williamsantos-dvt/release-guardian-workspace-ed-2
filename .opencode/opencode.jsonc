@@ -1,0 +1,91 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "../instructions/*.md"
+  ],
+  "model": "azure-cognitive-services/gpt-5.1",
+  "small_model": "azure-cognitive-services/gpt-5-mini",
+  "default_agent": "plan",
+  "enabled_providers": [
+    "azure-cognitive-services"
+  ],     
+  "agent": {
+    "plan": {
+      "model": "azure-cognitive-services/gpt-5.1",
+      "options": { "maxTokens": 128000, "reasoningEffort": "high", "textVerbosity": "medium" },
+      "permission": {
+        "skill": {}
+      }
+    },
+    "build": {
+      "model": "azure-cognitive-services/gpt-5.3-codex",
+      "options": { "maxTokens": 128000, "reasoningEffort": "high", "textVerbosity": "medium" },      
+      "permission": {
+        "skill": {}
+      }
+    },
+    "general": {
+      "model": "azure-cognitive-services/gpt-5.1-codex-mini",
+      "options": { "maxTokens": 128000, "reasoningEffort": "high", "textVerbosity": "medium" },      
+      "permission": {
+        "skill": {}
+      }
+    },
+    "explore": {
+      "model": "azure-cognitive-services/gpt-5-mini",
+      "options": { "maxTokens": 128000, "reasoningEffort": "high", "textVerbosity": "medium" }, 
+      "permission": {
+        "skill": {}
+      }
+    }
+  },
+  "provider": {
+    "azure-cognitive-services": {
+      "name": "Azure Cognitive Services (xTEAM)",
+      "options": {
+        "apiKey": "{file:./azure.token}",
+        "resourceName": "dvtpt-ct-xteam-cpt-xxx-fndy"
+      },
+      "whitelist": [
+        "gpt-5-mini",
+        "gpt-5.1",
+        "gpt-5.1-codex-mini",
+        "gpt-5.3-codex"
+      ],       
+      "models": {
+        // xTEAM Azure OpenAI Models
+        "gpt-5.3-codex": {
+          "name": "GPT-5.3 Codex (xTEAM)",
+          "options": { "maxTokens": 128000, "reasoningEffort": "high", "textVerbosity": "medium" },
+          "variants": { "medium": { "reasoningEffort": "medium" }, "high": { "reasoningEffort": "high" }, "xhigh": { "reasoningEffort": "xhigh" } },
+          "limit": { "context": 400000, "output": 128000 }
+        },
+        "gpt-5.1": {
+          "name": "GPT-5.1 (xTEAM)",
+          "options": { "maxTokens": 128000, "reasoningEffort": "high", "textVerbosity": "medium" },
+          "variants": { "medium": { "reasoningEffort": "medium" }, "high": { "reasoningEffort": "high" } },
+          "limit": { "context": 400000, "output": 128000 }
+        },
+        "gpt-5.1-codex-mini": {
+          "name": "GPT-5.1 Codex Mini (xTEAM)",
+          "options": { "maxTokens": 128000, "reasoningEffort": "high", "textVerbosity": "medium" },
+          "variants": { "medium": { "reasoningEffort": "medium" }, "high": { "reasoningEffort": "high" } },          
+          "limit": { "context": 400000, "output": 128000 }
+        },
+        "gpt-5-mini": {
+          "name": "GPT-5 Mini (xTEAM)",
+          "options": { "maxTokens": 128000, "reasoningEffort": "high", "textVerbosity": "medium" },
+          "variants": { "medium": { "reasoningEffort": "medium" }, "high": { "reasoningEffort": "high" } },          
+          "limit": { "context": 400000, "output": 128000 }
+        }      
+      }
+    }
+  },   
+  "mcp": {
+    "atlassian": {
+      "type": "remote",
+      "url": "https://mcp.atlassian.com/v1/mcp/authv2",
+      "enabled": false
+    }
+  }
+}
