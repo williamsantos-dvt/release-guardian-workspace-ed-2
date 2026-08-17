@@ -7,19 +7,29 @@
  */
 import type { Decision, ReleaseEvidence, ReasonCode } from '@release-guardian/contracts';
 import { REASON_CODES } from '@release-guardian/contracts';
-import { POLICY_VERSION, MINIMUM_COVERAGE, COVERAGE_REVIEW_THRESHOLD } from '../constants.js';
+import {
+  POLICY_VERSION,
+  MINIMUM_COVERAGE,
+  HOTFIX_MINIMUM_COVERAGE,
+  COVERAGE_REVIEW_THRESHOLD,
+} from '../constants.js';
 
 const BLOCKING_REASONS: ReadonlySet<ReasonCode> = new Set([
   'COVERAGE_BELOW_MINIMUM',
   'MANDATORY_TEST_FAILURE',
   'CRITICAL_SECURITY_VULNERABILITY',
-  'LINT_ERRORS',
 ]);
 
 const REVIEW_REASONS: ReadonlySet<ReasonCode> = new Set([
   'COVERAGE_REQUIRES_REVIEW',
   'HIGH_SECURITY_RISK',
+  'LINT_ERRORS',
 ]);
+
+function getCoverageMinimumForReleaseType(releaseType: ReleaseEvidence['releaseType']): number {
+  if (releaseType === 'hotfix') return HOTFIX_MINIMUM_COVERAGE;
+  return MINIMUM_COVERAGE;
+}
 
 export interface DecisionResult {
   decision: Decision;
@@ -29,8 +39,9 @@ export interface DecisionResult {
 
 export function evaluateRelease(data: ReleaseEvidence): DecisionResult {
   const reasonSet = new Set<ReasonCode>();
+  const coverageMinimum = getCoverageMinimumForReleaseType(data.releaseType);
 
-  if (data.coverage < MINIMUM_COVERAGE) {
+  if (data.coverage < coverageMinimum) {
     reasonSet.add('COVERAGE_BELOW_MINIMUM');
   } else if (data.coverage < COVERAGE_REVIEW_THRESHOLD) {
     reasonSet.add('COVERAGE_REQUIRES_REVIEW');
@@ -44,7 +55,7 @@ export function evaluateRelease(data: ReleaseEvidence): DecisionResult {
     reasonSet.add('CRITICAL_SECURITY_VULNERABILITY');
   }
 
-  if (data.security.high > 0 && data.security.critical === 0) {
+  if (data.security.high >= 3 && data.security.critical === 0) {
     reasonSet.add('HIGH_SECURITY_RISK');
   }
 

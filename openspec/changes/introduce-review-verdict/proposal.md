@@ -1,24 +1,23 @@
 ## Why
 
-The current policy engine only emits `GO` and `NO_GO`, while the shared contract,
-dashboard, and simulator already support `REVIEW`. This creates behavior drift and
-prevents manual-approval outcomes that are required by the release policy evolution.
+The original scope introduced `REVIEW`, but CR-01 (`docs/change-requests/cr-01-hotfix-policy.md`)
+changes policy behavior for coverage by release type and tightens/clarifies some review
+rules. The change artifacts must be updated so implementation can be re-applied with the
+new policy contract.
 
 ## What Changes
 
-- Add `REVIEW` as a real decision emitted by the backend policy engine.
-- Introduce review-level rules for:
-  - releases with `security.high > 0` and `security.critical == 0`, and
-  - releases with coverage between `60` and `79` (inclusive).
-- Convert coverage into explicit policy bands:
-  - coverage `< 60` => `NO_GO`,
-  - coverage `60..79` => `REVIEW`,
-  - coverage `>= 80` => no coverage-driven restriction.
-- Add/align reason code support for review outcomes and keep canonical ordering.
-- Update policy/API tests and seed-based statistics expectations for the new
-  decision distribution.
-- Update policy documentation to match executable behavior and keep docs/tests/code
-  synchronized.
+- Keep `REVIEW` as first-class decision and adapt it to CR-01 behavior.
+- Apply coverage bands by `releaseType`:
+  - `standard`: `< 70` => `NO_GO`, `70..79.99` => `REVIEW`, `>= 80` => no coverage reason.
+  - `hotfix`: `< 65` => `NO_GO`, `65..79.99` => `REVIEW`, `>= 80` => no coverage reason.
+- Keep no-go precedence for failed mandatory tests and critical vulnerabilities.
+- Change review-only rules to:
+  - `security.high >= 3` with `security.critical == 0` => `REVIEW` (`HIGH_SECURITY_RISK`)
+  - `lintErrors > 0` => `REVIEW` (`LINT_ERRORS`)
+- Keep canonical reason ordering and precedence `NO_GO > REVIEW > GO`.
+- Recalculate API statistics expectations from seeded history under CR-01 thresholds.
+- Update tests and docs so they stay aligned with executable policy.
 
 ## Capabilities
 
@@ -35,7 +34,7 @@ prevents manual-approval outcomes that are required by the release policy evolut
   `apps/api/src/constants.ts`, and API route/statistics behavior in
   `apps/api/src/routes/index.ts`.
 - Affected contracts: `packages/contracts/src/index.ts` (decision/reason alignment,
-  including coverage review reason code).
+  including coverage review reason code and reason ordering).
 - Affected tests: `apps/api/test/policy.test.ts` and `apps/api/test/api.test.ts`.
 - Affected documentation: `docs/release-policy.md` (and related references where
   decisions are described).

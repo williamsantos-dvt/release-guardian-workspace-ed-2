@@ -17,12 +17,13 @@ behavior requirements.
 ## Goals / Non-Goals
 
 **Goals:**
-- Add a minimal review path: `security.high > 0` with `security.critical == 0`
-  yields `REVIEW`.
-- Add a coverage review band: coverage `60..79` (inclusive) yields `REVIEW`,
-  while coverage `< 60` remains blocking (`NO_GO`).
-- Keep existing blocking rules unchanged and with higher precedence than review
-  rules.
+- Apply CR-01 coverage policy by release type:
+  - `standard`: `<70` => `NO_GO`, `70..79.99` => `REVIEW`, `>=80` => no coverage reason.
+  - `hotfix`: `<65` => `NO_GO`, `65..79.99` => `REVIEW`, `>=80` => no coverage reason.
+- Make high-security review threshold explicit: `security.high >= 3` when
+  `security.critical == 0`.
+- Treat lint errors (`lintErrors > 0`) as review-level findings.
+- Keep blocking precedence (`NO_GO > REVIEW > GO`) explicit and stable.
 - Keep HTTP request/response shapes stable while allowing new decision/reason
   values.
 - Ensure tests and docs are updated in the same change to avoid drift.
@@ -30,7 +31,7 @@ behavior requirements.
 **Non-Goals:**
 - No new persistence, queues, or infrastructure.
 - No redesign of route structure or dashboard data model.
-- No new review criteria beyond high-security and coverage-band rules for this increment.
+- No new review criteria beyond CR-01 thresholds/rules for this increment.
 
 ## Decisions
 
@@ -50,17 +51,24 @@ behavior requirements.
 - Alternative considered: infer review solely from `decision` without a reason.
   Rejected because it weakens explainability and breaks reason-based insights.
 
-3. Use explicit coverage bands
-- Decision: define coverage ranges as:
-  - `< 60` => blocking reason `COVERAGE_BELOW_MINIMUM` => `NO_GO`
-  - `60..79` => review reason `COVERAGE_REQUIRES_REVIEW` => `REVIEW`
-  - `>= 80` => no coverage reason
-- Rationale: matches the requested policy behavior and provides clear boundaries
-  for future evolution.
-- Alternative considered: keep a single threshold and infer review implicitly.
-  Rejected because it is ambiguous and hard to test at boundaries.
+3. Use release-type-aware coverage bands
+- Decision: choose coverage thresholds by `releaseType`.
+  - `standard`: `<70` blocking, `70..79.99` review, `>=80` none
+  - `hotfix`: `<65` blocking, `65..79.99` review, `>=80` none
+- Rationale: this is the exact CR-01 contract and preserves faster hotfix flow
+  without relaxing standard releases.
+- Alternative considered: keep one global threshold.
+  Rejected because it cannot satisfy CR-01 acceptance for hotfix vs standard at
+  the same coverage value.
 
-4. Reuse existing seed re-evaluation model
+4. Review-tier lint and high-security thresholds
+- Decision: classify `LINT_ERRORS` as review-tier and emit `HIGH_SECURITY_RISK`
+  only when `security.high >= 3` and `critical == 0`.
+- Rationale: aligns rules with CR-01 "unchanged rules" section.
+- Alternative considered: keep lint as blocking and high-threshold at `>0`.
+  Rejected because it conflicts with CR-01 policy requirements.
+
+5. Reuse existing seed re-evaluation model
 - Decision: do not change repository/seed architecture; rely on startup
   re-evaluation to produce new decision counts.
 - Rationale: current repository behavior is deterministic and already tested.
@@ -71,8 +79,8 @@ behavior requirements.
 
 - [Stats expectation drift after policy update] -> Recompute expected
   `byDecision` counts from seed evidence and update API tests in the same PR.
-- [Boundary regressions around 59/60/79/80] -> Add explicit unit and API test
-  scenarios for these values.
+- [Boundary regressions around release-type thresholds] -> Add explicit unit and
+  API test scenarios for `64/65/67/69.99/70/79.99/80` across both release types.
 - [Docs becoming stale again] -> Update `docs/release-policy.md` alongside code
   and tests, and keep `AGENTS.md` source-of-truth guidance.
 - [Reason ordering regressions] -> Keep a canonical-order unit test covering
@@ -84,7 +92,7 @@ behavior requirements.
 
 1. Update contracts/reason list and policy engine logic.
 2. Update unit tests for decision and reason ordering.
-3. Update API tests for seed statistics and review scenarios.
+3. Update API tests for release-type coverage thresholds, seed statistics, and review scenarios.
 4. Update release policy documentation to match executable behavior.
 5. Run `npm run validate` before merge.
 

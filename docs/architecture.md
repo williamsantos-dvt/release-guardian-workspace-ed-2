@@ -33,9 +33,11 @@ da policy estão em `apps/api/src/constants.ts`.
 
 Policy efetiva (baseline executavel):
 
-- cobertura `< 60` => `NO_GO` (`COVERAGE_BELOW_MINIMUM`)
-- cobertura `60..79` => `REVIEW` (`COVERAGE_REQUIRES_REVIEW`)
-- `security.high > 0` com `security.critical == 0` => `REVIEW` (`HIGH_SECURITY_RISK`)
+- cobertura por `releaseType`:
+  - `standard`: `< 70` => `NO_GO`; `70..79.99` => `REVIEW`; `>= 80` => sem razão de cobertura
+  - `hotfix`: `< 65` => `NO_GO`; `65..79.99` => `REVIEW`; `>= 80` => sem razão de cobertura
+- `security.high >= 3` com `security.critical == 0` => `REVIEW` (`HIGH_SECURITY_RISK`)
+- `lintErrors > 0` => `REVIEW` (`LINT_ERRORS`)
 
 ### Dashboard (`apps/dashboard`)
 

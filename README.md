@@ -24,10 +24,11 @@ Confirma o baseline antes de qualquer alteração:
 
 Policy baseline atual (executavel):
 
-- cobertura `< 60` => `NO_GO`
-- cobertura `60..79` => `REVIEW`
-- cobertura `>= 80` => sem razão de cobertura
-- `security.high > 0` com `security.critical == 0` => `REVIEW`
+- cobertura por tipo de release:
+  - `standard`: `< 70` => `NO_GO`; `70..79.99` => `REVIEW`; `>= 80` => sem razão de cobertura
+  - `hotfix`: `< 65` => `NO_GO`; `65..79.99` => `REVIEW`; `>= 80` => sem razão de cobertura
+- `security.high >= 3` com `security.critical == 0` => `REVIEW`
+- `lintErrors > 0` => `REVIEW`
 
 ## Comandos
 

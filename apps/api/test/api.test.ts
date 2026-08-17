@@ -35,7 +35,7 @@ describe('GET /api/v1/policy', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
       policyVersion: '1.2.0',
-      minimumCoverage: 60,
+      minimumCoverage: 70,
       supportedReleaseTypes: ['standard', 'hotfix'],
     });
   });
@@ -65,11 +65,27 @@ describe('POST /api/v1/evaluations', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('returns REVIEW for coverage between 60 and 79', async () => {
+  it('returns NO_GO for a standard release with coverage 67', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/v1/evaluations',
-      payload: { ...healthyEvidence, coverage: 75 },
+      payload: { ...healthyEvidence, coverage: 67, releaseType: 'standard' },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.decision).toBe('NO_GO');
+    expect(body.reasons).toContain('COVERAGE_BELOW_MINIMUM');
+  });
+
+  it('returns REVIEW for a hotfix release with coverage 67', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: {
+        ...healthyEvidence,
+        coverage: 67,
+        releaseType: 'hotfix',
+      },
     });
     expect(res.statusCode).toBe(201);
     const body = res.json();
@@ -77,20 +93,35 @@ describe('POST /api/v1/evaluations', () => {
     expect(body.reasons).toContain('COVERAGE_REQUIRES_REVIEW');
   });
 
-  it('returns REVIEW for high vulnerabilities without critical findings', async () => {
+  it('returns REVIEW for high vulnerabilities when threshold is met', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/v1/evaluations',
       payload: {
         ...healthyEvidence,
         coverage: 85,
-        security: { critical: 0, high: 2 },
+        security: { critical: 0, high: 3 },
       },
     });
     expect(res.statusCode).toBe(201);
     const body = res.json();
     expect(body.decision).toBe('REVIEW');
     expect(body.reasons).toContain('HIGH_SECURITY_RISK');
+  });
+
+  it('returns REVIEW for lint errors without blocking reasons', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: {
+        ...healthyEvidence,
+        lintErrors: 2,
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.decision).toBe('REVIEW');
+    expect(body.reasons).toContain('LINT_ERRORS');
   });
 });
 
@@ -128,7 +159,7 @@ describe('GET /api/v1/statistics', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.total).toBe(18);
-    expect(body.byDecision).toEqual({ GO: 7, REVIEW: 8, NO_GO: 3 });
+    expect(body.byDecision).toEqual({ GO: 10, REVIEW: 4, NO_GO: 4 });
     await fresh.close();
   });
 });

@@ -18,22 +18,34 @@ describe('release policy (baseline)', () => {
     expect(result.reasons).toEqual([]);
   });
 
-  it('blocks coverage below 60', () => {
-    const result = evaluateRelease({ ...healthy, coverage: 59 });
+  it('blocks standard release coverage below 70', () => {
+    const result = evaluateRelease({ ...healthy, coverage: 67 });
     expect(result.decision).toBe('NO_GO');
     expect(result.reasons).toContain('COVERAGE_BELOW_MINIMUM');
   });
 
-  it('requires review for coverage of 60', () => {
-    const result = evaluateRelease({ ...healthy, coverage: 60 });
+  it('requires review for standard coverage of 70', () => {
+    const result = evaluateRelease({ ...healthy, coverage: 70 });
     expect(result.decision).toBe('REVIEW');
     expect(result.reasons).toContain('COVERAGE_REQUIRES_REVIEW');
   });
 
-  it('requires review for coverage of 79', () => {
+  it('requires review for standard coverage of 79', () => {
     const result = evaluateRelease({ ...healthy, coverage: 79 });
     expect(result.decision).toBe('REVIEW');
     expect(result.reasons).toContain('COVERAGE_REQUIRES_REVIEW');
+  });
+
+  it('requires review for hotfix coverage of 67', () => {
+    const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 67 });
+    expect(result.decision).toBe('REVIEW');
+    expect(result.reasons).toContain('COVERAGE_REQUIRES_REVIEW');
+  });
+
+  it('blocks hotfix coverage below 65', () => {
+    const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 64 });
+    expect(result.decision).toBe('NO_GO');
+    expect(result.reasons).toContain('COVERAGE_BELOW_MINIMUM');
   });
 
   it('does not apply coverage reason for 80', () => {
@@ -43,10 +55,16 @@ describe('release policy (baseline)', () => {
     expect(result.reasons).not.toContain('COVERAGE_BELOW_MINIMUM');
   });
 
-  it('requires review for high vulnerabilities when critical is zero', () => {
-    const result = evaluateRelease({ ...healthy, security: { critical: 0, high: 1 } });
+  it('requires review for high vulnerabilities when threshold is met', () => {
+    const result = evaluateRelease({ ...healthy, security: { critical: 0, high: 3 } });
     expect(result.decision).toBe('REVIEW');
     expect(result.reasons).toContain('HIGH_SECURITY_RISK');
+  });
+
+  it('does not emit high-security review reason below threshold', () => {
+    const result = evaluateRelease({ ...healthy, security: { critical: 0, high: 2 } });
+    expect(result.decision).toBe('GO');
+    expect(result.reasons).not.toContain('HIGH_SECURITY_RISK');
   });
 
   it('blocks failed mandatory tests', () => {
@@ -72,9 +90,9 @@ describe('release policy (baseline)', () => {
     expect(result.reasons).toContain('MANDATORY_TEST_FAILURE');
   });
 
-  it('blocks lint errors', () => {
+  it('treats lint errors as review-level findings', () => {
     const result = evaluateRelease({ ...healthy, lintErrors: 5 });
-    expect(result.decision).toBe('NO_GO');
+    expect(result.decision).toBe('REVIEW');
     expect(result.reasons).toContain('LINT_ERRORS');
   });
 
@@ -82,9 +100,20 @@ describe('release policy (baseline)', () => {
     const result = evaluateRelease({
       ...healthy,
       coverage: 75,
-      security: { critical: 0, high: 2 },
+      security: { critical: 0, high: 3 },
     });
     expect(result.reasons).toEqual(['COVERAGE_REQUIRES_REVIEW', 'HIGH_SECURITY_RISK']);
+  });
+
+  it('keeps blocking precedence when lint review and critical finding coexist', () => {
+    const result = evaluateRelease({
+      ...healthy,
+      security: { critical: 1, high: 0 },
+      lintErrors: 4,
+    });
+    expect(result.decision).toBe('NO_GO');
+    expect(result.reasons).toContain('CRITICAL_SECURITY_VULNERABILITY');
+    expect(result.reasons).toContain('LINT_ERRORS');
   });
 
   it('returns all applicable reasons in a stable order', () => {
@@ -92,7 +121,7 @@ describe('release policy (baseline)', () => {
       ...healthy,
       coverage: 75,
       tests: { passed: 10, failed: 3 },
-      security: { critical: 2, high: 1 },
+      security: { critical: 2, high: 4 },
       lintErrors: 7,
     });
     expect(result.reasons).toEqual([

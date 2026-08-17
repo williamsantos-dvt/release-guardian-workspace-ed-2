@@ -24,3 +24,18 @@
 - [x] 4.1 Run `npm test` and ensure all API policy tests pass with the new REVIEW behavior.
 - [x] 4.2 Run `npm run validate` and confirm all layers pass (typecheck, lint, tests, coverage, smoke).
 - [x] 4.3 Manually smoke-check dashboard/simulator (`npm run dev`, `npm run simulate:pipeline -- <cenario>`) to confirm REVIEW is visible and coherent.
+
+## 5. CR-01 Hotfix Policy Adaptation (pending)
+
+Note: this section supersedes prior uniform coverage thresholds and updates
+review/blocking rules according to `docs/change-requests/cr-01-hotfix-policy.md`.
+
+- [x] 5.1 Update coverage constants for release-type-specific thresholds: standard (`<70` no-go, `70..79.99` review) and hotfix (`<65` no-go, `65..79.99` review).
+- [x] 5.2 Update `apps/api/src/services/releaseService.ts` to apply coverage bands by `releaseType` while keeping precedence `NO_GO > REVIEW > GO`.
+- [x] 5.3 Update high-security rule to emit `HIGH_SECURITY_RISK` only when `security.high >= 3` and `security.critical == 0`.
+- [x] 5.4 Reclassify `LINT_ERRORS` as review-level (`REVIEW`) and ensure it is not part of blocking reasons.
+- [x] 5.5 Keep no-go rules unchanged for mandatory test failures and critical vulnerabilities.
+- [x] 5.6 Update `apps/api/test/policy.test.ts` with CR-01 threshold cases, including `standard` 67 => `NO_GO` and `hotfix` 67 => `REVIEW`.
+- [x] 5.7 Update `apps/api/test/api.test.ts` for release-type coverage behavior, high-threshold (`>=3`), lint review behavior, and refreshed seed stats.
+- [x] 5.8 Update `docs/release-policy.md`, `docs/architecture.md`, and `README.md` to document CR-01 thresholds and unchanged constraints.
+- [x] 5.9 Run `npm test` and `npm run validate` and confirm both pass under CR-01 behavior.

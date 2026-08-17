@@ -20,9 +20,14 @@ uma decisão com as razões aplicáveis.
 
 ### Cobertura
 
-- **Cobertura < 60%** bloqueia a release (`COVERAGE_BELOW_MINIMUM`).
-- **Cobertura de 60% a 79%** exige revisão manual (`COVERAGE_REQUIRES_REVIEW`).
-- **Cobertura >= 80%** não gera razão de cobertura.
+- **STANDARD**:
+  - cobertura `< 70%` bloqueia a release (`COVERAGE_BELOW_MINIMUM`)
+  - cobertura `70% a 79.99%` exige revisão manual (`COVERAGE_REQUIRES_REVIEW`)
+  - cobertura `>= 80%` não gera razão de cobertura
+- **HOTFIX**:
+  - cobertura `< 65%` bloqueia a release (`COVERAGE_BELOW_MINIMUM`)
+  - cobertura `65% a 79.99%` exige revisão manual (`COVERAGE_REQUIRES_REVIEW`)
+  - cobertura `>= 80%` não gera razão de cobertura
 
 ### Testes
 
@@ -31,12 +36,12 @@ uma decisão com as razões aplicáveis.
 ### Segurança
 
 - Qualquer vulnerabilidade **critical** bloqueia a release (`CRITICAL_SECURITY_VULNERABILITY`).
-- Vulnerabilidades **high** com `critical == 0` exigem revisão manual
+- Vulnerabilidades **high** com `critical == 0` e `high >= 3` exigem revisão manual
   (`HIGH_SECURITY_RISK`).
 
 ### Lint
 
-- Erros de lint bloqueiam a release (`LINT_ERRORS`).
+- Erros de lint exigem revisão manual (`LINT_ERRORS`).
 
 ## Ordem das razões
 
@@ -52,7 +57,7 @@ ordem:
 
 ## Tipos de release
 
-A policy aplica-se de forma idêntica a releases `standard` e `hotfix`.
+A policy usa thresholds de cobertura distintos para releases `standard` e `hotfix`.
 
 ## Contrato da API
 
