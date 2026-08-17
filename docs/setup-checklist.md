@@ -12,17 +12,17 @@ Confirma cada ponto **antes** do dia do hackathon. No arranque do evento não ha
 
 ## Repositório
 
-- [ ] Clone do repositório do desafio feito
-- [ ] `npm install` concluído sem erros
-- [ ] `npm test` passa (suite verde)
-- [ ] `npm run dev:api` sobe a API em `http://localhost:3000`
-- [ ] `GET /health` responde `{"status":"ok"}`
-- [ ] Swagger acessível em `http://localhost:3000/docs`
-- [ ] `npm run dev:dashboard` sobe o dashboard em `http://localhost:5173`
-- [ ] `npm run simulate:pipeline -- healthy-release` devolve `GO`
+- [x] Clone do repositório do desafio feito
+- [x] `npm install` concluído sem erros
+- [x] `npm test` passa (suite verde)
+- [x] `npm run dev:api` sobe a API em `http://localhost:3000`
+- [x] `GET /health` responde `{"status":"ok"}`
+- [x] Swagger acessível em `http://localhost:3000/docs`
+- [x] `npm run dev:dashboard` sobe o dashboard em `http://localhost:5173`
+- [x] `npm run simulate:pipeline -- healthy-release` devolve `GO`
 
 ## Git
 
-- [ ] Autenticação no GitHub funcionando (`git push` de teste para a tua branch `participant/<prefixo-do-email>`)
+- [x] Autenticação no GitHub funcionando (`git push` de teste para a tua branch `participant/<prefixo-do-email>`)
 
 Se algo falhar, contacta a organização pelo canal de suporte **antes** do evento.
