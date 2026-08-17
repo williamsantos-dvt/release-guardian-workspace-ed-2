@@ -11,7 +11,7 @@ Quando o tipo de release e `standard` (`ReleaseEvidence.releaseType = 'standard'
 
 2. **Coverage entre 70 e 79.99% resulta em `REVIEW` se nao houver razoes `NO_GO`**
    - Se `70 <= coverage < 80`, `releaseType = 'standard'`, e nao ha motivos de `NO_GO` (sem `MANDATORY_TEST_FAILURE`, `CRITICAL_SECURITY_VULNERABILITY` ou coverage abaixo dos thresholds), a decisao final DEVE ser `REVIEW`.
-   - Nenhuma razao de cobertura DEVE ser considerada “bloqueante”; apenas razoes de `REVIEW` adicionais (lint, high vulns) podem ser incluidas.
+   - A razao `COVERAGE_BELOW_TARGET` DEVE ser sempre incluida quando `hasCoverageReviewBand` for verdadeiro, mesmo que seja a unica razao.
    - Teste: `it('puts standard releases with mid coverage into REVIEW when otherwise healthy')` em `apps/api/test/policy.test.ts` com evidencia `coverage: 72`, sem falhas nem vulns.
 
 3. **Coverage >= 80% nao impoe restricoes de cobertura**
@@ -29,6 +29,7 @@ Quando o tipo de release e `hotfix` (`ReleaseEvidence.releaseType = 'hotfix'`):
 
 5. **Coverage entre 65 e 79.99% em hotfix resulta em `REVIEW` quando saudavel**
    - Se `65 <= coverage < 80`, `releaseType = 'hotfix'`, e nao ha motivos de `NO_GO`, a decisao final DEVE ser `REVIEW`.
+   - A razao `COVERAGE_BELOW_TARGET` DEVE ser sempre incluida para auditoria.
    - Teste de aceitacao: `it('evaluates canonical hotfix-release scenario as REVIEW')` em `apps/api/test/policy.test.ts`, usando `examples/hotfix-release.json` como evidencia (`examples/hotfix-release.json:1`-`examples/hotfix-release.json:8`).
 
 6. **Coverage >= 80% em hotfix nao impoe restricoes de cobertura**
@@ -53,7 +54,7 @@ Quando o tipo de release e `hotfix` (`ReleaseEvidence.releaseType = 'hotfix'`):
      - `it('puts releases with lint errors into REVIEW when otherwise healthy')` em `apps/api/test/policy.test.ts`.
 
 9. **Combinacoes de `NO_GO` e `REVIEW` respeitam precedencia**
-   - Quando coverage esta na faixa de `REVIEW`, mas existem tambem motivos de `NO_GO` (critical ou mandatory tests), a decisao final DEVE ser `NO_GO`, com todas as razoes devolvidas (`COVERAGE_BELOW_MINIMUM`, `MANDATORY_TEST_FAILURE`, `CRITICAL_SECURITY_VULNERABILITY`, `LINT_ERRORS`) na ordem definida em `REASON_CODES`.
+   - Quando coverage esta na faixa de `REVIEW`, mas existem tambem motivos de `NO_GO` (critical ou mandatory tests), a decisao final DEVE ser `NO_GO`, com todas as razoes devolvidas (`COVERAGE_BELOW_TARGET`, `MANDATORY_TEST_FAILURE`, `CRITICAL_SECURITY_VULNERABILITY`, `HIGH_SECURITY_RISK`, `LINT_ERRORS`) na ordem definida em `REASON_CODES`.
    - Teste: reutilizar e ajustar o caso multi-falha em `apps/api/test/policy.test.ts:49`-`apps/api/test/policy.test.ts:62`, garantindo que decision e `NO_GO` e ordenacao de razoes se mantem.
 
 ### Requirement: Seeds e estatisticas
@@ -70,7 +71,12 @@ Quando o tipo de release e `hotfix` (`ReleaseEvidence.releaseType = 'hotfix'`):
     - `Decision` continua a ser `'GO' | 'REVIEW' | 'NO_GO'`, sem novos valores no enum: `packages/contracts/src/index.ts:10`, `packages/contracts/src/index.ts:126`.
     - Teste: smoke functional em `scripts/validate.mjs:31`-`scripts/validate.mjs:96` permanece verde sem ajuste de formato, apenas com novas decisoes possiveis (REVIEW).
 
-12. **Dashboard e simulador nao sao alterados**
+12. **`GET /api/v1/policy` expoe thresholds por tipo sem quebra de contrato**
+    - O endpoint DEVE manter os campos existentes (`policyVersion`, `minimumCoverage`, `supportedReleaseTypes`) e adicionar `coverageThresholdsByReleaseType` como campo aditivo.
+    - O campo aditivo DEVE expor, no minimo, `standard.minimum`, `standard.reviewBelow`, `hotfix.minimum`, `hotfix.reviewBelow`.
+    - Teste: `it('exposes the current policy')` em `apps/api/test/api.test.ts` valida os campos existentes e os novos thresholds.
+
+13. **Dashboard e simulador nao sao alterados**
     - `apps/dashboard/**` e `scripts/simulate-pipeline.cjs` nao recebem alteracoes; estes consumidores ja suportam `REVIEW` (`scripts/simulate-pipeline.cjs:82`-`scripts/simulate-pipeline.cjs:87`).
     - Teste: manual / demo funcional atraves de `npm run simulate:pipeline -- hotfix-release` (`docs/change-requests/cr-01-hotfix-policy.md:59`-`docs/change-requests/cr-01-hotfix-policy.md:61`).
 
@@ -78,3 +84,4 @@ Quando o tipo de release e `hotfix` (`ReleaseEvidence.releaseType = 'hotfix'`):
 
 - `MINIMUM_COVERAGE` continua a representar o threshold canonico para `standard` (`apps/api/src/constants.ts:5`), enquanto thresholds especificos para `hotfix` sao implementados na logica do motor sem alterar o contrato de `/api/v1/policy`.
 - `HIGH_SECURITY_RISK` so sera introduzido em `REASON_CODES` se a equipa decidir explicitamente, com testes dedicados; caso contrario, razoes atuais serao usadas para representar vulnerabilidades `high`.
+- `COVERAGE_BELOW_TARGET` e o reason code canonico para auditar decisoes `REVIEW` vindas da banda de cobertura.

@@ -8,7 +8,13 @@ import {
 } from '@release-guardian/contracts';
 import { EvaluationRepository } from '../repository/evaluationRepository.js';
 import { evaluateRelease, getMinimumCoverage } from '../services/releaseService.js';
-import { POLICY_VERSION, SERVICE_VERSION, SUPPORTED_RELEASE_TYPES } from '../constants.js';
+import {
+  POLICY_VERSION,
+  SERVICE_VERSION,
+  SUPPORTED_RELEASE_TYPES,
+  HOTFIX_MINIMUM_COVERAGE,
+  REVIEW_COVERAGE_THRESHOLD,
+} from '../constants.js';
 
 export function registerRoutes(app: FastifyInstance, repo: EvaluationRepository): void {
   app.get('/health', async () => {
@@ -23,6 +29,10 @@ export function registerRoutes(app: FastifyInstance, repo: EvaluationRepository)
         policyVersion: POLICY_VERSION,
         minimumCoverage: getMinimumCoverage(),
         supportedReleaseTypes: SUPPORTED_RELEASE_TYPES,
+        coverageThresholdsByReleaseType: {
+          standard: { minimum: getMinimumCoverage(), reviewBelow: REVIEW_COVERAGE_THRESHOLD },
+          hotfix: { minimum: HOTFIX_MINIMUM_COVERAGE, reviewBelow: REVIEW_COVERAGE_THRESHOLD },
+        },
       };
     }
   );

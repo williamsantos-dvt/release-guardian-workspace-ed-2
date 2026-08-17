@@ -13,28 +13,53 @@ uma decisão com as razões aplicáveis.
 | Decisão | Significado |
 |---|---|
 | `GO` | Release aprovada para deployment |
+| `REVIEW` | Release requer aprovação manual antes do deployment |
 | `NO_GO` | Release bloqueada |
 
 ## Regras em vigor
 
 ### Cobertura
 
-- **Cobertura mínima: 75%.** Cobertura inferior a 75% bloqueia a release
-  (`COVERAGE_BELOW_MINIMUM`).
+- **STANDARD**:
+
+  | Cobertura | Decisão |
+  |---|---|
+  | `< 70` | `NO_GO` (`COVERAGE_BELOW_MINIMUM`) |
+  | `70 – 79.99` | `REVIEW` (`COVERAGE_BELOW_TARGET`) |
+  | `>= 80` | sem restrição |
+
+- **HOTFIX**:
+
+  | Cobertura | Decisão |
+  |---|---|
+  | `< 65` | `NO_GO` (`COVERAGE_BELOW_MINIMUM`) |
+  | `65 – 79.99` | `REVIEW` (`COVERAGE_BELOW_TARGET`) |
+  | `>= 80` | sem restrição |
 
 ### Testes
 
-- Qualquer teste mandatório falhado bloqueia a release (`MANDATORY_TEST_FAILURE`).
+- Qualquer teste mandatório falhado bloqueia a release (`MANDATORY_TEST_FAILURE`, `NO_GO`).
 
 ### Segurança
 
-- Qualquer vulnerabilidade **critical** bloqueia a release (`CRITICAL_SECURITY_VULNERABILITY`).
+- Qualquer vulnerabilidade **critical** bloqueia a release (`CRITICAL_SECURITY_VULNERABILITY`, `NO_GO`).
 - **Qualquer vulnerabilidade high** exige revisão pela equipa de segurança antes
-  do deployment (`HIGH_SECURITY_RISK`).
+  do deployment (`HIGH_SECURITY_RISK`, para `high >= 3`, decisão `REVIEW`).
 
 ### Lint
 
-- Erros de lint bloqueiam a release (`LINT_ERRORS`).
+- Erros de lint exigem revisão manual (`LINT_ERRORS`, decisão `REVIEW`).
+
+## Precedência de decisões
+
+Quando múltiplas regras se aplicam, a decisão final segue:
+
+1. `NO_GO`
+2. `REVIEW`
+3. `GO`
+
+Isto garante que regras bloqueantes (cobertura abaixo do mínimo, falhas de testes,
+vulnerabilidades críticas) nunca são sobrepostas por regras de revisão.
 
 ## Ordem das razões
 
@@ -42,13 +67,15 @@ Quando várias regras se aplicam, todas as razões são devolvidas pela seguinte
 ordem:
 
 1. `COVERAGE_BELOW_MINIMUM`
-2. `MANDATORY_TEST_FAILURE`
-3. `CRITICAL_SECURITY_VULNERABILITY`
-4. `LINT_ERRORS`
+2. `COVERAGE_BELOW_TARGET`
+3. `MANDATORY_TEST_FAILURE`
+4. `CRITICAL_SECURITY_VULNERABILITY`
+5. `HIGH_SECURITY_RISK`
+6. `LINT_ERRORS`
 
 ## Tipos de release
 
-A policy aplica-se de forma idêntica a releases `standard` e `hotfix`.
+A policy distingue releases `standard` e `hotfix` apenas nas bandas de cobertura.
 
 ## Contrato da API
 

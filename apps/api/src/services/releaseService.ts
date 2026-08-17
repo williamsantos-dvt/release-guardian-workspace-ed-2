@@ -5,58 +5,77 @@
  * The decision contract is consumed by CI pipelines — treat the response
  * shape as frozen (see packages/contracts).
  */
-import { POLICY_VERSION, MINIMUM_COVERAGE } from '../constants.js';
+import type { Decision, ReleaseEvidence } from '@release-guardian/contracts';
+import {
+  POLICY_VERSION,
+  MINIMUM_COVERAGE,
+  HOTFIX_MINIMUM_COVERAGE,
+  REVIEW_COVERAGE_THRESHOLD,
+  HIGH_SECURITY_RISK_THRESHOLD,
+} from '../constants.js';
 
 export interface DecisionResult {
-  decision: 'GO' | 'NO_GO';
+  decision: Decision;
   reasons: string[];
   policyVersion: string;
 }
 
-export function evaluateRelease(data: any): DecisionResult {
-  const reasons = [];
+function getCoverageMinimum(releaseType: ReleaseEvidence['releaseType']): number {
+  return releaseType === 'hotfix' ? HOTFIX_MINIMUM_COVERAGE : MINIMUM_COVERAGE;
+}
 
-  if (data.coverage < 70) {
+export function evaluateRelease(data: ReleaseEvidence): DecisionResult {
+  const reasons: string[] = [];
+  const minimumCoverage = getCoverageMinimum(data.releaseType);
+
+  const hasCoverageBlock = data.coverage < minimumCoverage;
+  const hasCoverageReviewBand = !hasCoverageBlock && data.coverage < REVIEW_COVERAGE_THRESHOLD;
+  const hasMandatoryTestFailure = data.tests.failed > 0;
+  const hasCriticalSecurityVulnerability = data.security.critical > 0;
+  const hasHighSecurityRisk = data.security.high >= HIGH_SECURITY_RISK_THRESHOLD;
+  const hasLintErrors = data.lintErrors > 0;
+
+  if (hasCoverageBlock) {
     reasons.push('COVERAGE_BELOW_MINIMUM');
   }
 
-  if (data.tests.failed > 0) {
+  if (hasCoverageReviewBand) {
+    reasons.push('COVERAGE_BELOW_TARGET');
+  }
+
+  if (hasMandatoryTestFailure) {
     reasons.push('MANDATORY_TEST_FAILURE');
   }
 
-  if (data.security.critical > 0) {
+  if (hasCriticalSecurityVulnerability) {
     reasons.push('CRITICAL_SECURITY_VULNERABILITY');
   }
 
-  if (data.lintErrors > 0) {
+  if (hasHighSecurityRisk) {
+    reasons.push('HIGH_SECURITY_RISK');
+  }
+
+  if (hasLintErrors) {
     reasons.push('LINT_ERRORS');
   }
 
-  // decide final outcome from collected reasons
-  let decision: 'GO' | 'NO_GO' = 'GO';
-  if (reasons.includes('COVERAGE_BELOW_MINIMUM')) {
+  let decision: Decision = 'GO';
+  if (hasCoverageBlock || hasMandatoryTestFailure || hasCriticalSecurityVulnerability) {
     decision = 'NO_GO';
-  }
-  if (reasons.includes('MANDATORY_TEST_FAILURE')) {
-    decision = 'NO_GO';
-  }
-  if (reasons.includes('CRITICAL_SECURITY_VULNERABILITY')) {
-    decision = 'NO_GO';
-  }
-  if (reasons.includes('LINT_ERRORS')) {
-    decision = 'NO_GO';
+  } else if (hasCoverageReviewBand || hasHighSecurityRisk || hasLintErrors) {
+    decision = 'REVIEW';
   }
 
   const result = {
-    decision: decision,
-    reasons: reasons,
+    decision,
+    reasons,
     policyVersion: POLICY_VERSION,
   };
 
   return result;
 }
 
-// exported for the /policy endpoint; kept in sync with the checks above
+// exported for the /policy endpoint (standard release threshold)
 export function getMinimumCoverage(): number {
   return MINIMUM_COVERAGE;
 }

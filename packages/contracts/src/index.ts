@@ -26,8 +26,10 @@ export interface ReleaseEvidence {
 /** Reason codes emitted by the policy engine, in canonical order. */
 export const REASON_CODES = [
   'COVERAGE_BELOW_MINIMUM',
+  'COVERAGE_BELOW_TARGET',
   'MANDATORY_TEST_FAILURE',
   'CRITICAL_SECURITY_VULNERABILITY',
+  'HIGH_SECURITY_RISK',
   'LINT_ERRORS',
 ] as const;
 
@@ -67,6 +69,10 @@ export interface PolicySnapshot {
   policyVersion: string;
   minimumCoverage: number;
   supportedReleaseTypes: ReleaseType[];
+  coverageThresholdsByReleaseType?: {
+    standard: { minimum: number; reviewBelow: number };
+    hotfix: { minimum: number; reviewBelow: number };
+  };
 }
 
 /** Response of GET /api/v1/statistics. */
@@ -137,5 +143,27 @@ export const policySnapshotSchema = {
     policyVersion: { type: 'string' },
     minimumCoverage: { type: 'number' },
     supportedReleaseTypes: { type: 'array', items: { type: 'string' } },
+    coverageThresholdsByReleaseType: {
+      type: 'object',
+      required: ['standard', 'hotfix'],
+      properties: {
+        standard: {
+          type: 'object',
+          required: ['minimum', 'reviewBelow'],
+          properties: {
+            minimum: { type: 'number' },
+            reviewBelow: { type: 'number' },
+          },
+        },
+        hotfix: {
+          type: 'object',
+          required: ['minimum', 'reviewBelow'],
+          properties: {
+            minimum: { type: 'number' },
+            reviewBelow: { type: 'number' },
+          },
+        },
+      },
+    },
   },
 } as const;

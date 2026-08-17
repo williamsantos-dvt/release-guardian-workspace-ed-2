@@ -13,6 +13,7 @@ This change evolves the legacy policy engine (`apps/api/src/services/releaseServ
 1. **Extract literal 70**
    - Replace the `coverage < 70` literal check in `evaluateRelease` (`apps/api/src/services/releaseService.ts:19`) with `coverage < MINIMUM_COVERAGE`, using `MINIMUM_COVERAGE` from `apps/api/src/constants.ts:5`.
    - Keep `/api/v1/policy` aligned by continuing to call `getMinimumCoverage` (`apps/api/src/services/releaseService.ts:60`-`apps/api/src/services/releaseService.ts:61`, `apps/api/src/routes/index.ts:24`).
+   - Move `HOTFIX_MINIMUM_COVERAGE` and `REVIEW_COVERAGE_THRESHOLD` to `apps/api/src/constants.ts` so all coverage thresholds live in one place.
 
 2. **Introduce derived thresholds per release type**
    - Inside `evaluateRelease`, compute derived thresholds:
@@ -35,7 +36,8 @@ This change evolves the legacy policy engine (`apps/api/src/services/releaseServ
    - Instead of directly pushing `COVERAGE_BELOW_MINIMUM` and flipping `decision` to `NO_GO` immediately, compute coverage contribution:
 
      - For each release, compute a `coverageDecision` (`GO`, `REVIEW`, `NO_GO`) based on the thresholds.
-     - Only add `COVERAGE_BELOW_MINIMUM` when `coverageDecision === 'NO_GO'`.
+     - Add `COVERAGE_BELOW_MINIMUM` when `coverageDecision === 'NO_GO'`.
+     - Add `COVERAGE_BELOW_TARGET` when `coverageDecision === 'REVIEW'` so REVIEW decisions from coverage remain auditable.
 
    - This allows later precedence logic to be explicit: high-priority reasons (critical, mandatory tests) can override coverage, while coverage `REVIEW` becomes a candidate decision.
 
@@ -60,7 +62,8 @@ This change evolves the legacy policy engine (`apps/api/src/services/releaseServ
      - Mandatory tests failure reason.
      - Critical vulnerabilities reason.
      - Lint reason.
-     - If `HIGH_SECURITY_RISK` is added, insert it in `REASON_CODES` and compute accordingly.
+      - Include `COVERAGE_BELOW_TARGET` immediately after `COVERAGE_BELOW_MINIMUM` in canonical order.
+      - Include `HIGH_SECURITY_RISK` before `LINT_ERRORS`.
 
    - Decide final decision:
 
@@ -96,5 +99,9 @@ This change evolves the legacy policy engine (`apps/api/src/services/releaseServ
 
 ## Contracts and external consumers
 
-- Leave `packages/contracts/src/index.ts` unchanged for HTTP shapes; only consider adding `HIGH_SECURITY_RISK` to `REASON_CODES` if agreed.
+- Keep request/response shapes unchanged, but extend policy metadata additively:
+  - `GET /api/v1/policy` keeps existing fields (`policyVersion`, `minimumCoverage`, `supportedReleaseTypes`).
+  - `GET /api/v1/policy` adds `coverageThresholdsByReleaseType` with `standard.minimum`, `standard.reviewBelow`, `hotfix.minimum`, `hotfix.reviewBelow`.
+  - This is additive and therefore does not break current consumers of the existing fields.
+- Update `REASON_CODES` to include `COVERAGE_BELOW_TARGET` and `HIGH_SECURITY_RISK` in canonical order.
 - Leave `apps/dashboard/**` and `scripts/simulate-pipeline.cjs` untouched; they already handle NEW decision `REVIEW`.

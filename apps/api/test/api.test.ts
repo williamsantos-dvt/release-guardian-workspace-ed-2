@@ -34,9 +34,13 @@ describe('GET /api/v1/policy', () => {
     const res = await app.inject({ method: 'GET', url: '/api/v1/policy' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
-      policyVersion: '1.2.0',
+      policyVersion: '1.3.0',
       minimumCoverage: 70,
       supportedReleaseTypes: ['standard', 'hotfix'],
+      coverageThresholdsByReleaseType: {
+        standard: { minimum: 70, reviewBelow: 80 },
+        hotfix: { minimum: 65, reviewBelow: 80 },
+      },
     });
   });
 });
@@ -100,7 +104,7 @@ describe('GET /api/v1/statistics', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.total).toBe(18);
-    expect(body.byDecision).toEqual({ GO: 13, REVIEW: 0, NO_GO: 5 });
+    expect(body.byDecision).toEqual({ GO: 10, REVIEW: 4, NO_GO: 4 });
     await fresh.close();
   });
 });
