@@ -44,7 +44,7 @@
       "name": "Azure Cognitive Services (xTEAM)",
       "options": {
         "apiKey": "{file:./azure.token}",
-        "resourceName": "dvtpt-ct-xteam-cpt-xxx-fndy"
+        "resourceName": "dvtpt-ct-xteam-cpt-java-fndy"
       },
       "whitelist": [
         "gpt-5-mini",
