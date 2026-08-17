@@ -81,7 +81,7 @@ export function registerRoutes(app: FastifyInstance, repo: EvaluationRepository)
     const reasonCounts = new Map<string, number>();
     for (const e of all) {
       byDecision[e.decision] = (byDecision[e.decision] ?? 0) + 1;
-      if (e.decision !== 'GO') {
+      if (e.decision === 'NO_GO') {
         for (const reason of e.reasons) {
           reasonCounts.set(reason, (reasonCounts.get(reason) ?? 0) + 1);
         }

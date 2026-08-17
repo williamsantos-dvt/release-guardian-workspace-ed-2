@@ -100,7 +100,13 @@ describe('GET /api/v1/statistics', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.total).toBe(18);
-    expect(body.byDecision).toEqual({ GO: 13, REVIEW: 0, NO_GO: 5 });
+    expect(body.byDecision).toEqual({ GO: 8, REVIEW: 5, NO_GO: 5 });
+    expect(body.topBlockingReasons).toEqual([
+      { reason: 'COVERAGE_BELOW_MINIMUM', count: 2 },
+      { reason: 'LINT_ERRORS', count: 2 },
+      { reason: 'MANDATORY_TEST_FAILURE', count: 2 },
+      { reason: 'CRITICAL_SECURITY_VULNERABILITY', count: 1 },
+    ]);
     await fresh.close();
   });
 });

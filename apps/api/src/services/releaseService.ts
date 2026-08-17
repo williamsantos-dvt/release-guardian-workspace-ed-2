@@ -8,15 +8,15 @@
 import { POLICY_VERSION, MINIMUM_COVERAGE } from '../constants.js';
 
 export interface DecisionResult {
-  decision: 'GO' | 'NO_GO';
+  decision: 'GO' | 'REVIEW' | 'NO_GO';
   reasons: string[];
   policyVersion: string;
 }
 
 export function evaluateRelease(data: any): DecisionResult {
-  const reasons = [];
+  const reasons: string[] = [];
 
-  if (data.coverage < 70) {
+  if (data.coverage < MINIMUM_COVERAGE) {
     reasons.push('COVERAGE_BELOW_MINIMUM');
   }
 
@@ -28,23 +28,26 @@ export function evaluateRelease(data: any): DecisionResult {
     reasons.push('CRITICAL_SECURITY_VULNERABILITY');
   }
 
+  if (data.security.high > 0 && data.security.critical === 0) {
+    reasons.push('HIGH_SECURITY_RISK');
+  }
+
   if (data.lintErrors > 0) {
     reasons.push('LINT_ERRORS');
   }
 
   // decide final outcome from collected reasons
-  let decision: 'GO' | 'NO_GO' = 'GO';
-  if (reasons.includes('COVERAGE_BELOW_MINIMUM')) {
+  const hasBlockingReason =
+    reasons.includes('COVERAGE_BELOW_MINIMUM') ||
+    reasons.includes('MANDATORY_TEST_FAILURE') ||
+    reasons.includes('CRITICAL_SECURITY_VULNERABILITY') ||
+    reasons.includes('LINT_ERRORS');
+
+  let decision: 'GO' | 'REVIEW' | 'NO_GO' = 'GO';
+  if (hasBlockingReason) {
     decision = 'NO_GO';
-  }
-  if (reasons.includes('MANDATORY_TEST_FAILURE')) {
-    decision = 'NO_GO';
-  }
-  if (reasons.includes('CRITICAL_SECURITY_VULNERABILITY')) {
-    decision = 'NO_GO';
-  }
-  if (reasons.includes('LINT_ERRORS')) {
-    decision = 'NO_GO';
+  } else if (reasons.includes('HIGH_SECURITY_RISK')) {
+    decision = 'REVIEW';
   }
 
   const result = {
