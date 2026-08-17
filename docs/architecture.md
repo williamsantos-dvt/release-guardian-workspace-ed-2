@@ -31,6 +31,10 @@ Serviço Fastify em TypeScript. Expõe:
 O motor de decisão vive em `apps/api/src/services/releaseService.ts`; os limiares
 da policy estão em `apps/api/src/constants.ts`.
 
+A decisão final segue três estados (`GO`, `REVIEW`, `NO_GO`) com precedência
+`NO_GO > REVIEW > GO`. O endpoint de policy expõe os limiares por tipo de
+release (standard/hotfix) e a lista de decisões suportadas.
+
 ### Dashboard (`apps/dashboard`)
 
 React/Vite. Consome exclusivamente a API. Mostra contadores por decisão,

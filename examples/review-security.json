@@ -1,0 +1,8 @@
+{
+  "releaseId": "payments-api-9.1.0",
+  "releaseType": "standard",
+  "tests": { "passed": 398, "failed": 0 },
+  "coverage": 88,
+  "security": { "critical": 0, "high": 3 },
+  "lintErrors": 0
+}

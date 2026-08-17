@@ -5,46 +5,64 @@
  * The decision contract is consumed by CI pipelines — treat the response
  * shape as frozen (see packages/contracts).
  */
-import { POLICY_VERSION, MINIMUM_COVERAGE } from '../constants.js';
+import {
+  POLICY_VERSION,
+  MINIMUM_COVERAGE,
+  HOTFIX_MINIMUM_COVERAGE,
+  TARGET_COVERAGE,
+  HIGH_SECURITY_REVIEW_THRESHOLD,
+} from '../constants.js';
 
 export interface DecisionResult {
-  decision: 'GO' | 'NO_GO';
+  decision: 'GO' | 'REVIEW' | 'NO_GO';
   reasons: string[];
   policyVersion: string;
 }
 
 export function evaluateRelease(data: any): DecisionResult {
-  const reasons = [];
+  const minimumCoverage = getMinimumCoverage(data.releaseType);
+  const coverageBelowMinimum = data.coverage < minimumCoverage;
+  const coverageNeedsReview = !coverageBelowMinimum && data.coverage < TARGET_COVERAGE;
+  const mandatoryTestFailure = data.tests.failed > 0;
+  const criticalSecurityVulnerability = data.security.critical > 0;
+  const highSecurityRisk = data.security.high >= HIGH_SECURITY_REVIEW_THRESHOLD;
+  const lintErrors = data.lintErrors > 0;
 
-  if (data.coverage < 70) {
+  const reasons: string[] = [];
+  if (coverageBelowMinimum) {
     reasons.push('COVERAGE_BELOW_MINIMUM');
   }
-
-  if (data.tests.failed > 0) {
+  if (mandatoryTestFailure) {
     reasons.push('MANDATORY_TEST_FAILURE');
   }
-
-  if (data.security.critical > 0) {
+  if (criticalSecurityVulnerability) {
     reasons.push('CRITICAL_SECURITY_VULNERABILITY');
   }
-
-  if (data.lintErrors > 0) {
+  if (highSecurityRisk) {
+    reasons.push('HIGH_SECURITY_RISK');
+  }
+  if (coverageNeedsReview) {
+    reasons.push('COVERAGE_NEEDS_REVIEW');
+  }
+  if (lintErrors) {
     reasons.push('LINT_ERRORS');
   }
 
   // decide final outcome from collected reasons
-  let decision: 'GO' | 'NO_GO' = 'GO';
-  if (reasons.includes('COVERAGE_BELOW_MINIMUM')) {
+  const hasNoGoReason =
+    reasons.includes('COVERAGE_BELOW_MINIMUM') ||
+    reasons.includes('MANDATORY_TEST_FAILURE') ||
+    reasons.includes('CRITICAL_SECURITY_VULNERABILITY');
+  const hasReviewReason =
+    reasons.includes('HIGH_SECURITY_RISK') ||
+    reasons.includes('COVERAGE_NEEDS_REVIEW') ||
+    reasons.includes('LINT_ERRORS');
+
+  let decision: 'GO' | 'REVIEW' | 'NO_GO' = 'GO';
+  if (hasNoGoReason) {
     decision = 'NO_GO';
-  }
-  if (reasons.includes('MANDATORY_TEST_FAILURE')) {
-    decision = 'NO_GO';
-  }
-  if (reasons.includes('CRITICAL_SECURITY_VULNERABILITY')) {
-    decision = 'NO_GO';
-  }
-  if (reasons.includes('LINT_ERRORS')) {
-    decision = 'NO_GO';
+  } else if (hasReviewReason) {
+    decision = 'REVIEW';
   }
 
   const result = {
@@ -57,6 +75,10 @@ export function evaluateRelease(data: any): DecisionResult {
 }
 
 // exported for the /policy endpoint; kept in sync with the checks above
-export function getMinimumCoverage(): number {
-  return MINIMUM_COVERAGE;
+export function getMinimumCoverage(releaseType: string = 'standard'): number {
+  return releaseType === 'hotfix' ? HOTFIX_MINIMUM_COVERAGE : MINIMUM_COVERAGE;
+}
+
+export function getTargetCoverage(): number {
+  return TARGET_COVERAGE;
 }

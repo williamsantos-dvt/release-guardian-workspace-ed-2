@@ -13,14 +13,22 @@ uma decisão com as razões aplicáveis.
 | Decisão | Significado |
 |---|---|
 | `GO` | Release aprovada para deployment |
+| `REVIEW` | Release requer aprovação manual antes do deployment |
 | `NO_GO` | Release bloqueada |
 
 ## Regras em vigor
 
 ### Cobertura
 
-- **Cobertura mínima: 75%.** Cobertura inferior a 75% bloqueia a release
-  (`COVERAGE_BELOW_MINIMUM`).
+- **STANDARD**
+  - `coverage < 70` -> `NO_GO` com `COVERAGE_BELOW_MINIMUM`
+  - `70 <= coverage < 80` -> `REVIEW` com `COVERAGE_NEEDS_REVIEW`
+  - `coverage >= 80` -> sem restrição de cobertura
+
+- **HOTFIX**
+  - `coverage < 65` -> `NO_GO` com `COVERAGE_BELOW_MINIMUM`
+  - `65 <= coverage < 80` -> `REVIEW` com `COVERAGE_NEEDS_REVIEW`
+  - `coverage >= 80` -> sem restrição de cobertura
 
 ### Testes
 
@@ -29,12 +37,17 @@ uma decisão com as razões aplicáveis.
 ### Segurança
 
 - Qualquer vulnerabilidade **critical** bloqueia a release (`CRITICAL_SECURITY_VULNERABILITY`).
-- **Qualquer vulnerabilidade high** exige revisão pela equipa de segurança antes
-  do deployment (`HIGH_SECURITY_RISK`).
+- Vulnerabilidades **high >= 3** exigem revisão manual (`HIGH_SECURITY_RISK`).
 
 ### Lint
 
-- Erros de lint bloqueiam a release (`LINT_ERRORS`).
+- Erros de lint exigem revisão manual (`LINT_ERRORS`).
+
+### Precedência de decisão
+
+Quando coexistem sinais bloqueantes e sinais de revisão:
+
+`NO_GO > REVIEW > GO`
 
 ## Ordem das razões
 
@@ -44,7 +57,9 @@ ordem:
 1. `COVERAGE_BELOW_MINIMUM`
 2. `MANDATORY_TEST_FAILURE`
 3. `CRITICAL_SECURITY_VULNERABILITY`
-4. `LINT_ERRORS`
+4. `HIGH_SECURITY_RISK`
+5. `COVERAGE_NEEDS_REVIEW`
+6. `LINT_ERRORS`
 
 ## Tipos de release
 

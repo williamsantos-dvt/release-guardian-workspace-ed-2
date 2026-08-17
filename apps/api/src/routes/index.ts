@@ -7,8 +7,8 @@ import {
   policySnapshotSchema,
 } from '@release-guardian/contracts';
 import { EvaluationRepository } from '../repository/evaluationRepository.js';
-import { evaluateRelease, getMinimumCoverage } from '../services/releaseService.js';
-import { POLICY_VERSION, SERVICE_VERSION, SUPPORTED_RELEASE_TYPES } from '../constants.js';
+import { evaluateRelease, getMinimumCoverage, getTargetCoverage } from '../services/releaseService.js';
+import { POLICY_VERSION, SERVICE_VERSION, SUPPORTED_RELEASE_TYPES, SUPPORTED_DECISIONS } from '../constants.js';
 
 export function registerRoutes(app: FastifyInstance, repo: EvaluationRepository): void {
   app.get('/health', async () => {
@@ -22,6 +22,9 @@ export function registerRoutes(app: FastifyInstance, repo: EvaluationRepository)
       return {
         policyVersion: POLICY_VERSION,
         minimumCoverage: getMinimumCoverage(),
+        hotfixMinimumCoverage: getMinimumCoverage('hotfix'),
+        targetCoverage: getTargetCoverage(),
+        supportedDecisions: SUPPORTED_DECISIONS,
         supportedReleaseTypes: SUPPORTED_RELEASE_TYPES,
       };
     }

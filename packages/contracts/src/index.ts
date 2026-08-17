@@ -28,6 +28,8 @@ export const REASON_CODES = [
   'COVERAGE_BELOW_MINIMUM',
   'MANDATORY_TEST_FAILURE',
   'CRITICAL_SECURITY_VULNERABILITY',
+  'HIGH_SECURITY_RISK',
+  'COVERAGE_NEEDS_REVIEW',
   'LINT_ERRORS',
 ] as const;
 
@@ -66,6 +68,9 @@ export interface EvaluationSummary {
 export interface PolicySnapshot {
   policyVersion: string;
   minimumCoverage: number;
+  hotfixMinimumCoverage: number;
+  targetCoverage: number;
+  supportedDecisions: Decision[];
   supportedReleaseTypes: ReleaseType[];
 }
 
@@ -132,10 +137,20 @@ export const evaluateResponseSchema = {
 
 export const policySnapshotSchema = {
   type: 'object',
-  required: ['policyVersion', 'minimumCoverage', 'supportedReleaseTypes'],
+  required: [
+    'policyVersion',
+    'minimumCoverage',
+    'hotfixMinimumCoverage',
+    'targetCoverage',
+    'supportedDecisions',
+    'supportedReleaseTypes',
+  ],
   properties: {
     policyVersion: { type: 'string' },
     minimumCoverage: { type: 'number' },
+    hotfixMinimumCoverage: { type: 'number' },
+    targetCoverage: { type: 'number' },
+    supportedDecisions: { type: 'array', items: { type: 'string', enum: ['GO', 'REVIEW', 'NO_GO'] } },
     supportedReleaseTypes: { type: 'array', items: { type: 'string' } },
   },
 } as const;

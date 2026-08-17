@@ -36,6 +36,9 @@ describe('GET /api/v1/policy', () => {
     expect(res.json()).toMatchObject({
       policyVersion: '1.2.0',
       minimumCoverage: 70,
+      hotfixMinimumCoverage: 65,
+      targetCoverage: 80,
+      supportedDecisions: ['GO', 'REVIEW', 'NO_GO'],
       supportedReleaseTypes: ['standard', 'hotfix'],
     });
   });
@@ -100,7 +103,7 @@ describe('GET /api/v1/statistics', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.total).toBe(18);
-    expect(body.byDecision).toEqual({ GO: 13, REVIEW: 0, NO_GO: 5 });
+    expect(body.byDecision).toEqual({ GO: 10, REVIEW: 4, NO_GO: 4 });
     await fresh.close();
   });
 });
