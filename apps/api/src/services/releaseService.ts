@@ -1,55 +1,59 @@
 /**
- * Release evaluation service (legacy).
+ * Release evaluation service.
  *
  * Turns pipeline evidence into a deployment decision with reasons.
  * The decision contract is consumed by CI pipelines — treat the response
  * shape as frozen (see packages/contracts).
  */
-import { POLICY_VERSION, MINIMUM_COVERAGE } from '../constants.js';
+import type { Decision, ReasonCode, ReleaseEvidence } from '@release-guardian/contracts';
+import {
+  COVERAGE_REVIEW_THRESHOLD,
+  MINIMUM_COVERAGE,
+  POLICY_VERSION,
+} from '../constants.js';
 
 export interface DecisionResult {
-  decision: 'GO' | 'NO_GO';
-  reasons: string[];
+  decision: Decision;
+  reasons: ReasonCode[];
   policyVersion: string;
 }
 
-export function evaluateRelease(data: any): DecisionResult {
-  const reasons = [];
+export function evaluateRelease(data: ReleaseEvidence): DecisionResult {
+  const reasons: ReasonCode[] = [];
+  const coverageBelowMinimum = data.coverage < MINIMUM_COVERAGE;
+  const coverageNeedsAttention = data.coverage < COVERAGE_REVIEW_THRESHOLD;
+  const coverageIsBorderline = data.coverage >= MINIMUM_COVERAGE && coverageNeedsAttention;
+  const isHotfixRelease = data.releaseType === 'hotfix';
+  const hasTestFailure = data.tests.failed > 0;
+  const hasCriticalVulnerability = data.security.critical > 0;
+  const hasLintErrors = data.lintErrors > 0;
 
-  if (data.coverage < 70) {
+  if (coverageNeedsAttention) {
     reasons.push('COVERAGE_BELOW_MINIMUM');
   }
 
-  if (data.tests.failed > 0) {
+  if (hasTestFailure) {
     reasons.push('MANDATORY_TEST_FAILURE');
   }
 
-  if (data.security.critical > 0) {
+  if (hasCriticalVulnerability) {
     reasons.push('CRITICAL_SECURITY_VULNERABILITY');
   }
 
-  if (data.lintErrors > 0) {
+  if (hasLintErrors) {
     reasons.push('LINT_ERRORS');
   }
 
-  // decide final outcome from collected reasons
-  let decision: 'GO' | 'NO_GO' = 'GO';
-  if (reasons.includes('COVERAGE_BELOW_MINIMUM')) {
+  let decision: Decision = 'GO';
+  if (coverageBelowMinimum || hasTestFailure || hasCriticalVulnerability || hasLintErrors) {
     decision = 'NO_GO';
-  }
-  if (reasons.includes('MANDATORY_TEST_FAILURE')) {
-    decision = 'NO_GO';
-  }
-  if (reasons.includes('CRITICAL_SECURITY_VULNERABILITY')) {
-    decision = 'NO_GO';
-  }
-  if (reasons.includes('LINT_ERRORS')) {
-    decision = 'NO_GO';
+  } else if (coverageIsBorderline && !isHotfixRelease) {
+    decision = 'REVIEW';
   }
 
   const result = {
-    decision: decision,
-    reasons: reasons,
+    decision,
+    reasons,
     policyVersion: POLICY_VERSION,
   };
 

@@ -1,57 +1,61 @@
-# Release Policy — Referência Funcional
+# Release Policy - Referencia Funcional
 
-> Documentação de referência da release policy do Release Guardian.
-> Última revisão conhecida: atualização maior da policy (ver changelog interno).
+> Versao atual: **Policy v2.0.0**
 
-## Visão geral
+## Visao geral
 
-O Guardian avalia cada submissão de evidência contra a policy em vigor e devolve
-uma decisão com as razões aplicáveis.
+O Guardian avalia evidencias submetidas por pipelines CI/CD e devolve uma
+decisao auditavel (`GO`, `REVIEW` ou `NO_GO`) com as razoes aplicaveis.
 
-## Decisões possíveis
+## Decisoes
 
-| Decisão | Significado |
+| Decisao | Significado operacional |
 |---|---|
 | `GO` | Release aprovada para deployment |
-| `NO_GO` | Release bloqueada |
+| `REVIEW` | Release bloqueada ate aprovacao humana manual e auditavel |
+| `NO_GO` | Release bloqueada por violacao de regra hard-stop |
 
-## Regras em vigor
+## Policy v2.0.0
 
-### Cobertura
+### Cobertura por bandas e tipo de release
 
-- **Cobertura mínima: 75%.** Cobertura inferior a 75% bloqueia a release
-  (`COVERAGE_BELOW_MINIMUM`).
+| Cobertura | `standard` | `hotfix` | Razao |
+|---|---|---|---|
+| `< 70` | `NO_GO` | `NO_GO` | `COVERAGE_BELOW_MINIMUM` (bloqueante) |
+| `70-79.999...` | `REVIEW` | `GO` | `COVERAGE_BELOW_MINIMUM` (bloqueante em `standard`, nao bloqueante em `hotfix`) |
+| `>= 80` | sem bloqueio de cobertura | sem bloqueio de cobertura | sem razao de cobertura |
 
-### Testes
+### Outros bloqueios hard-stop
 
-- Qualquer teste mandatório falhado bloqueia a release (`MANDATORY_TEST_FAILURE`).
+- `tests.failed > 0` -> `MANDATORY_TEST_FAILURE` -> `NO_GO`
+- `security.critical > 0` -> `CRITICAL_SECURITY_VULNERABILITY` -> `NO_GO`
+- `lintErrors > 0` -> `LINT_ERRORS` -> `NO_GO`
 
-### Segurança
+Se qualquer hard-stop estiver presente, a decisao final e sempre `NO_GO`, mesmo
+quando a cobertura cairia em `REVIEW`.
 
-- Qualquer vulnerabilidade **critical** bloqueia a release (`CRITICAL_SECURITY_VULNERABILITY`).
-- **Qualquer vulnerabilidade high** exige revisão pela equipa de segurança antes
-  do deployment (`HIGH_SECURITY_RISK`).
+### Ordem canonica das razoes
 
-### Lint
-
-- Erros de lint bloqueiam a release (`LINT_ERRORS`).
-
-## Ordem das razões
-
-Quando várias regras se aplicam, todas as razões são devolvidas pela seguinte
-ordem:
+As razoes sao sempre devolvidas nesta ordem:
 
 1. `COVERAGE_BELOW_MINIMUM`
 2. `MANDATORY_TEST_FAILURE`
 3. `CRITICAL_SECURITY_VULNERABILITY`
 4. `LINT_ERRORS`
 
-## Tipos de release
+`COVERAGE_BELOW_MINIMUM` pode aparecer tambem em decisoes `GO` (caso de hotfix
+na banda 70-79), como sinal de risco nao bloqueante.
 
-A policy aplica-se de forma idêntica a releases `standard` e `hotfix`.
+## Diferenca v1 vs v2
+
+- **v1**: cobertura `< 70` -> `NO_GO`; cobertura `>= 70` nao influencia; engine
+  nao emitia `REVIEW`.
+- **v2**: cobertura tiered por banda + `releaseType`; `REVIEW` passa a ser usado
+  para `standard` na banda 70-79; hotfix na mesma banda segue `GO` com razao
+  nao bloqueante.
 
 ## Contrato da API
 
-O contrato de `POST /api/v1/evaluations` está congelado: pipelines em produção
-dependem dele. Evoluções da policy não podem alterar o pedido nem a forma da
-resposta.
+O contrato de `POST /api/v1/evaluations` permanece congelado em estrutura.
+Esta mudanca altera semantica de decisao e uso de razoes, sem mudar o shape da
+request/response.

@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
+import type { ReleaseEvidence } from '@release-guardian/contracts';
 import { evaluateRelease } from '../src/services/releaseService.js';
 
-const healthy = {
+const healthy: ReleaseEvidence = {
   releaseId: 'test-release',
   releaseType: 'standard',
   tests: { passed: 100, failed: 0 },
@@ -10,20 +11,39 @@ const healthy = {
   lintErrors: 0,
 };
 
-describe('release policy (baseline)', () => {
+describe('release policy (v2 tiered coverage)', () => {
   it('approves a healthy release', () => {
     const result = evaluateRelease(healthy);
     expect(result.decision).toBe('GO');
     expect(result.reasons).toEqual([]);
   });
 
-  it('approves coverage of 72', () => {
+  it('sends a standard release in the 70-79 band to REVIEW', () => {
     const result = evaluateRelease({ ...healthy, coverage: 72 });
+    expect(result.decision).toBe('REVIEW');
+    expect(result.reasons).toEqual(['COVERAGE_BELOW_MINIMUM']);
+  });
+
+  it('approves a hotfix in the 70-79 band with a non-blocking coverage reason', () => {
+    const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 72 });
     expect(result.decision).toBe('GO');
+    expect(result.reasons).toEqual(['COVERAGE_BELOW_MINIMUM']);
+  });
+
+  it('does not emit a coverage reason at 80 or above', () => {
+    const result = evaluateRelease({ ...healthy, coverage: 80 });
+    expect(result.decision).toBe('GO');
+    expect(result.reasons).toEqual([]);
   });
 
   it('blocks coverage below the minimum', () => {
     const result = evaluateRelease({ ...healthy, coverage: 63 });
+    expect(result.decision).toBe('NO_GO');
+    expect(result.reasons).toContain('COVERAGE_BELOW_MINIMUM');
+  });
+
+  it('blocks hotfix releases below the minimum coverage', () => {
+    const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 63 });
     expect(result.decision).toBe('NO_GO');
     expect(result.reasons).toContain('COVERAGE_BELOW_MINIMUM');
   });
@@ -46,10 +66,21 @@ describe('release policy (baseline)', () => {
     expect(result.reasons).toContain('LINT_ERRORS');
   });
 
+  it('lets hard blockers override REVIEW for standard releases', () => {
+    const result = evaluateRelease({
+      ...healthy,
+      coverage: 75,
+      tests: { passed: 99, failed: 1 },
+    });
+    expect(result.decision).toBe('NO_GO');
+    expect(result.reasons).toEqual(['COVERAGE_BELOW_MINIMUM', 'MANDATORY_TEST_FAILURE']);
+  });
+
   it('returns all applicable reasons in a stable order', () => {
     const result = evaluateRelease({
       ...healthy,
-      coverage: 60,
+      coverage: 74,
+      releaseType: 'hotfix',
       tests: { passed: 10, failed: 3 },
       security: { critical: 2, high: 0 },
       lintErrors: 7,
