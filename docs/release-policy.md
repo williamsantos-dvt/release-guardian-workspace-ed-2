@@ -1,7 +1,7 @@
 # Release Policy — Referência Funcional
 
 > Documentação de referência da release policy do Release Guardian.
-> Última revisão conhecida: policy `1.3.0`.
+> Última revisão conhecida: policy `1.4.0`.
 
 ## Visão geral
 
@@ -20,9 +20,21 @@ uma decisão com as razões aplicáveis.
 
 ### Cobertura
 
-- `coverage < 60` bloqueia a release (`COVERAGE_BELOW_MINIMUM`).
-- `60 <= coverage < 80` exige revisão manual (`COVERAGE_REQUIRES_REVIEW`).
-- `coverage >= 80` não gera razão de cobertura.
+- **STANDARD**:
+
+| Cobertura | Decisão |
+|---|---|
+| `< 70` | `NO_GO` (`COVERAGE_BELOW_MINIMUM`) |
+| `70 <= coverage < 80` | `REVIEW` (`COVERAGE_REQUIRES_REVIEW`) |
+| `>= 80` | sem razão de cobertura |
+
+- **HOTFIX**:
+
+| Cobertura | Decisão |
+|---|---|
+| `< 65` | `NO_GO` (`COVERAGE_BELOW_MINIMUM`) |
+| `65 <= coverage < 80` | `REVIEW` (`COVERAGE_REQUIRES_REVIEW`) |
+| `>= 80` | sem razão de cobertura |
 
 ### Testes
 
@@ -31,11 +43,11 @@ uma decisão com as razões aplicáveis.
 ### Segurança
 
 - Qualquer vulnerabilidade **critical** bloqueia a release (`CRITICAL_SECURITY_VULNERABILITY`).
-- Vulnerabilidades **high** não alteram a decisão na policy `1.3.0`.
+- Vulnerabilidades **high >= 3** exigem revisão manual (`HIGH_SECURITY_RISK`).
 
 ### Lint
 
-- Erros de lint bloqueiam a release (`LINT_ERRORS`).
+- Erros de lint exigem revisão manual (`LINT_ERRORS`).
 
 ## Ordem das razões
 
@@ -45,12 +57,16 @@ ordem:
 1. `COVERAGE_BELOW_MINIMUM`
 2. `MANDATORY_TEST_FAILURE`
 3. `CRITICAL_SECURITY_VULNERABILITY`
-4. `COVERAGE_REQUIRES_REVIEW`
-5. `LINT_ERRORS`
+4. `HIGH_SECURITY_RISK`
+5. `COVERAGE_REQUIRES_REVIEW`
+6. `LINT_ERRORS`
 
 ## Tipos de release
 
-A policy aplica-se de forma idêntica a releases `standard` e `hotfix`.
+A policy aplica limiares de cobertura distintos para releases `standard` e `hotfix`.
+
+No endpoint `GET /api/v1/policy`, o campo `minimumCoverage` representa o limiar
+mínimo para `hotfix` (65).
 
 ## Contrato da API
 

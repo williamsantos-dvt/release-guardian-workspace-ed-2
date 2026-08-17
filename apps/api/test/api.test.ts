@@ -34,8 +34,8 @@ describe('GET /api/v1/policy', () => {
     const res = await app.inject({ method: 'GET', url: '/api/v1/policy' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
-      policyVersion: '1.3.0',
-      minimumCoverage: 60,
+      policyVersion: '1.4.0',
+      minimumCoverage: 65,
       supportedReleaseTypes: ['standard', 'hotfix'],
     });
   });
@@ -68,6 +68,79 @@ describe('POST /api/v1/evaluations', () => {
       releaseId: 'api-review-release',
       decision: 'REVIEW',
       reasons: ['COVERAGE_REQUIRES_REVIEW'],
+    });
+  });
+
+  it('keeps standard coverage of 67 as NO_GO', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: { ...healthyEvidence, releaseId: 'api-standard-67', coverage: 67 },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({
+      releaseId: 'api-standard-67',
+      decision: 'NO_GO',
+      reasons: ['COVERAGE_BELOW_MINIMUM'],
+    });
+  });
+
+  it('evaluates hotfix coverage of 67 as REVIEW (CR-01)', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: {
+        ...healthyEvidence,
+        releaseId: 'api-hotfix-67',
+        releaseType: 'hotfix',
+        coverage: 67,
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({
+      releaseId: 'api-hotfix-67',
+      decision: 'REVIEW',
+      reasons: ['COVERAGE_REQUIRES_REVIEW'],
+    });
+  });
+
+  it('returns REVIEW for high security risk (>=3) without critical', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: {
+        ...healthyEvidence,
+        releaseId: 'api-high-risk-review',
+        security: { critical: 0, high: 3 },
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({
+      releaseId: 'api-high-risk-review',
+      decision: 'REVIEW',
+      reasons: ['HIGH_SECURITY_RISK'],
+    });
+  });
+
+  it('returns REVIEW for lint errors without blockers', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: {
+        ...healthyEvidence,
+        releaseId: 'api-lint-review',
+        lintErrors: 3,
+      },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({
+      releaseId: 'api-lint-review',
+      decision: 'REVIEW',
+      reasons: ['LINT_ERRORS'],
     });
   });
 
@@ -115,7 +188,7 @@ describe('GET /api/v1/statistics', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.total).toBe(18);
-    expect(body.byDecision).toEqual({ GO: 10, REVIEW: 5, NO_GO: 3 });
+    expect(body.byDecision).toEqual({ GO: 10, REVIEW: 4, NO_GO: 4 });
     await fresh.close();
   });
 });

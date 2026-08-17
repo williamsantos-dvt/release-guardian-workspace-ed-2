@@ -5,7 +5,13 @@
  * The decision contract is consumed by CI pipelines — treat the response
  * shape as frozen (see packages/contracts).
  */
-import { POLICY_VERSION, MINIMUM_COVERAGE, GO_COVERAGE } from '../constants.js';
+import {
+  POLICY_VERSION,
+  MINIMUM_COVERAGE,
+  GO_COVERAGE,
+  STANDARD_MINIMUM_COVERAGE,
+  HOTFIX_MINIMUM_COVERAGE,
+} from '../constants.js';
 
 export interface DecisionResult {
   decision: 'GO' | 'REVIEW' | 'NO_GO';
@@ -15,8 +21,10 @@ export interface DecisionResult {
 
 export function evaluateRelease(data: any): DecisionResult {
   const reasons: string[] = [];
+  const coverageMinimum =
+    data.releaseType === 'hotfix' ? HOTFIX_MINIMUM_COVERAGE : STANDARD_MINIMUM_COVERAGE;
 
-  if (data.coverage < MINIMUM_COVERAGE) {
+  if (data.coverage < coverageMinimum) {
     reasons.push('COVERAGE_BELOW_MINIMUM');
   }
 
@@ -28,7 +36,11 @@ export function evaluateRelease(data: any): DecisionResult {
     reasons.push('CRITICAL_SECURITY_VULNERABILITY');
   }
 
-  if (data.coverage >= MINIMUM_COVERAGE && data.coverage < GO_COVERAGE) {
+  if (data.security.high >= 3) {
+    reasons.push('HIGH_SECURITY_RISK');
+  }
+
+  if (data.coverage >= coverageMinimum && data.coverage < GO_COVERAGE) {
     reasons.push('COVERAGE_REQUIRES_REVIEW');
   }
 
@@ -40,13 +52,17 @@ export function evaluateRelease(data: any): DecisionResult {
   const hasNoGoReason =
     reasons.includes('COVERAGE_BELOW_MINIMUM') ||
     reasons.includes('MANDATORY_TEST_FAILURE') ||
-    reasons.includes('CRITICAL_SECURITY_VULNERABILITY') ||
+    reasons.includes('CRITICAL_SECURITY_VULNERABILITY');
+
+  const hasReviewReason =
+    reasons.includes('HIGH_SECURITY_RISK') ||
+    reasons.includes('COVERAGE_REQUIRES_REVIEW') ||
     reasons.includes('LINT_ERRORS');
 
   let decision: 'GO' | 'REVIEW' | 'NO_GO' = 'GO';
   if (hasNoGoReason) {
     decision = 'NO_GO';
-  } else if (reasons.includes('COVERAGE_REQUIRES_REVIEW')) {
+  } else if (hasReviewReason) {
     decision = 'REVIEW';
   }
 
