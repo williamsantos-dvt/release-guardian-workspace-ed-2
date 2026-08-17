@@ -6,17 +6,25 @@
  * shape as frozen (see packages/contracts).
  */
 import { POLICY_VERSION, MINIMUM_COVERAGE } from '../constants.js';
+import type { Decision, ReleaseEvidence } from '@release-guardian/contracts';
 
 export interface DecisionResult {
-  decision: 'GO' | 'NO_GO';
+  decision: Decision;
   reasons: string[];
   policyVersion: string;
 }
 
-export function evaluateRelease(data: any): DecisionResult {
-  const reasons = [];
+const BLOCKING_REASONS = new Set([
+  'COVERAGE_BELOW_MINIMUM',
+  'MANDATORY_TEST_FAILURE',
+  'CRITICAL_SECURITY_VULNERABILITY',
+  'LINT_ERRORS',
+]);
 
-  if (data.coverage < 70) {
+export function evaluateRelease(data: ReleaseEvidence): DecisionResult {
+  const reasons: string[] = [];
+
+  if (data.coverage < MINIMUM_COVERAGE) {
     reasons.push('COVERAGE_BELOW_MINIMUM');
   }
 
@@ -32,24 +40,20 @@ export function evaluateRelease(data: any): DecisionResult {
     reasons.push('LINT_ERRORS');
   }
 
-  // decide final outcome from collected reasons
-  let decision: 'GO' | 'NO_GO' = 'GO';
-  if (reasons.includes('COVERAGE_BELOW_MINIMUM')) {
-    decision = 'NO_GO';
+  if (data.security.critical === 0 && data.security.high > 0) {
+    reasons.push('HIGH_SECURITY_RISK');
   }
-  if (reasons.includes('MANDATORY_TEST_FAILURE')) {
+
+  let decision: Decision = 'GO';
+  if (reasons.some((reason) => BLOCKING_REASONS.has(reason))) {
     decision = 'NO_GO';
-  }
-  if (reasons.includes('CRITICAL_SECURITY_VULNERABILITY')) {
-    decision = 'NO_GO';
-  }
-  if (reasons.includes('LINT_ERRORS')) {
-    decision = 'NO_GO';
+  } else if (reasons.includes('HIGH_SECURITY_RISK')) {
+    decision = 'REVIEW';
   }
 
   const result = {
-    decision: decision,
-    reasons: reasons,
+    decision,
+    reasons,
     policyVersion: POLICY_VERSION,
   };
 
