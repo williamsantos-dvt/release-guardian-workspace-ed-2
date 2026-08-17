@@ -172,3 +172,53 @@ This is not a bug by itself, but it is a deliberate mismatch between "example pa
 ## Quick baseline conclusion
 
 Executable baseline is coherent around a 70% threshold and binary engine decisions (`GO`/`NO_GO`), while docs contain forward-looking or stale policy statements (75%, `HIGH_SECURITY_RISK`, decisions table without `REVIEW`). Contract already exposes `REVIEW` at the boundary, but the decision engine has no path to emit it yet.
+
+## 6) Riscos para a evolução da policy
+
+### a) O engine lê `data.releaseType` em algum ponto?
+
+Nao. Em `evaluateRelease`, as unicas leituras de `data` sao `coverage`, `tests.failed`, `security.critical` e `lintErrors`: `apps/api/src/services/releaseService.ts:19`-`apps/api/src/services/releaseService.ts:33`.
+
+Implicacao hoje: `standard` e `hotfix` sao tratados de forma identica no motor de decisao. `releaseType` existe no contrato (`packages/contracts/src/index.ts:13`, `packages/contracts/src/index.ts:18`) e na validacao HTTP (`packages/contracts/src/index.ts:96`), e o endpoint de policy anuncia tipos suportados (`apps/api/src/constants.ts:6`, `apps/api/src/routes/index.ts:25`), mas essa informacao nao altera a decisao no engine.
+
+### b) Efeito de adicionar uma quinta atribuicao `decision = 'REVIEW'` depois de `releaseService.ts:48` para `critical > 0 && high > 0`
+
+Se adicionares, apos os `if` atuais, algo como:
+
+```ts
+if (data.security.critical > 0 && data.security.high > 0) {
+  decision = 'REVIEW';
+}
+```
+
+entao essa nova atribuicao executa por ultimo e sobrepoe o `NO_GO` definido antes em `apps/api/src/services/releaseService.ts:37`-`apps/api/src/services/releaseService.ts:48`.
+
+Caso concreto EV-0016:
+
+- Seed EV-0016: `coverage: 74`, `failed: 0`, `critical: 1`, `high: 4`, `lintErrors: 12` em `apps/api/src/seeds/seedData.ts:30`.
+- Razoes calculadas continuam a ser exatamente `['CRITICAL_SECURITY_VULNERABILITY', 'LINT_ERRORS']` (ordem pelo fluxo de checks): `apps/api/src/services/releaseService.ts:27`-`apps/api/src/services/releaseService.ts:33`.
+- Decisao final passa a ser `REVIEW` (override final), nao `NO_GO`.
+- `policyVersion` permanece `'1.2.0'`: `apps/api/src/constants.ts:3`, `apps/api/src/services/releaseService.ts:53`.
+
+Efeito agregado no baseline seed (18 entradas): como o repositorio reavalia seeds via engine (`apps/api/src/repository/evaluationRepository.ts:14`-`apps/api/src/repository/evaluationRepository.ts:16`, `apps/api/src/repository/evaluationRepository.ts:23`), o `byDecision` esperado muda de `{ GO: 13, REVIEW: 0, NO_GO: 5 }` para `{ GO: 13, REVIEW: 1, NO_GO: 4 }`.
+
+### c) Tipo de `reasons` nos contracts: `ReasonCode[]` ou `string[]`?
+
+Nos contratos expostos, `reasons` esta tipado como `string[]`, nao `ReasonCode[]`:
+
+- `ReleaseEvaluation.reasons: string[]`: `packages/contracts/src/index.ts:41`.
+- `EvaluateResponse.reasons: string[]`: `packages/contracts/src/index.ts:52`.
+- No engine, tambem e `string[]`: `apps/api/src/services/releaseService.ts:12`.
+- No schema HTTP, `reasons` e array de `string` sem enum de reason codes: `packages/contracts/src/index.ts:127`.
+
+Risco: passam sem deteccao estatica e sem rejeicao de schema valores fora da lista canonica (`REASON_CODES` em `packages/contracts/src/index.ts:27`-`packages/contracts/src/index.ts:32`), incluindo typos (ex.: `CRITICAL_SECURITY_VULNERABLITY`), razoes novas nao versionadas, duplicadas, ou strings arbitrarias.
+
+### d) Que testes existentes quebram inevitavelmente ao introduzir `REVIEW`?
+
+Com a alteracao concreta do ponto (b), o teste que quebra inevitavelmente e:
+
+- `GET /api/v1/statistics` -> `aggregates decisions over the seeded history` em `apps/api/test/api.test.ts:96`-`apps/api/test/api.test.ts:104`.
+  - Motivo: o teste fixa `byDecision` como `{ GO: 13, REVIEW: 0, NO_GO: 5 }` em `apps/api/test/api.test.ts:103`.
+  - Com EV-0016 a virar `REVIEW`, o valor real passa a `{ GO: 13, REVIEW: 1, NO_GO: 4 }`.
+
+No estado atual dos testes, nao ha outro teste que falhe inevitavelmente so por existir um caminho `REVIEW`. Os testes de policy em `apps/api/test/policy.test.ts:13`-`apps/api/test/policy.test.ts:64` nao usam fixture com `critical > 0 && high > 0`, portanto nao capturam diretamente o caso de override descrito em (b).

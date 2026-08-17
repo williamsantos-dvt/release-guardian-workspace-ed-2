@@ -68,6 +68,16 @@ Projeto: Release Guardian (serviço interno de release readiness usado por pipel
   - `evaluateRelease` usa actualmente o valor literal 70; testes aprovam cobertura de 72 e bloqueiam 63.
   - `docs/release-policy.md` ainda menciona 75% — em caso de conflito, usar **constants + contratos + testes** como fonte de verdade e so depois alinhar a documentacao.
 
+## Invariantes da Release Policy
+
+- Fonte desta investigacao: `docs/investigation/01-findings.md:176`.
+- `NO_GO` tem precedencia sobre `REVIEW`: nenhuma release com `CRITICAL_SECURITY_VULNERABILITY` ou `MANDATORY_TEST_FAILURE` pode terminar em `REVIEW`; a cadeia actual em `apps/api/src/services/releaseService.ts:35`-`apps/api/src/services/releaseService.ts:48` nao implementa precedencia formal, por isso qualquer atribuicao nova no fim pode sobrepor decisoes anteriores (ver tambem `docs/investigation/01-findings.md:184`).
+- Nao adicionar nem remover linhas em `apps/api/src/seeds/seedData.ts`: o total seed tem de ficar em 18 e os IDs `EV-00NN` sao deterministicos (`apps/api/test/api.test.ts:76`, `apps/api/test/api.test.ts:102`, `apps/api/test/api.test.ts:77`, `apps/api/src/repository/evaluationRepository.ts:16`-`apps/api/src/repository/evaluationRepository.ts:20`).
+- O snapshot `byDecision` em `apps/api/test/api.test.ts:103` deve ser **recalculado a partir da nova regra de policy**; nunca "corrigir" snapshot mexendo no seed ou estreitando regra. O repositorio reavalia sempre o seed contra a policy corrente (`apps/api/src/repository/evaluationRepository.ts:2`-`apps/api/src/repository/evaluationRepository.ts:3`, `apps/api/src/repository/evaluationRepository.ts:15`, `apps/api/src/repository/evaluationRepository.ts:23`).
+- Extrair o literal `70` de `apps/api/src/services/releaseService.ts:19` para usar `MINIMUM_COVERAGE` ao mexer em thresholds; hoje engine e `GET /api/v1/policy` podem divergir em silencio (`apps/api/src/constants.ts:5`, `apps/api/src/services/releaseService.ts:60`-`apps/api/src/services/releaseService.ts:61`, `apps/api/src/routes/index.ts:24`).
+- Proibido alterar `apps/dashboard/**` e `scripts/simulate-pipeline.cjs` em evolucao de policy: dashboard/simulador ja suportam `REVIEW` e o contrato propaga a mudanca ate eles (`packages/contracts/src/index.ts:9`-`packages/contracts/src/index.ts:10`, `scripts/simulate-pipeline.cjs:84`-`scripts/simulate-pipeline.cjs:86`, `docs/challenge-brief.md:43`).
+- `reasons` e `string[]`, nao `ReasonCode[]`; qualquer reason nova exige atualizacao de `REASON_CODES` e cobertura de teste, porque runtime/schema nao validam enum de reasons (`packages/contracts/src/index.ts:27`-`packages/contracts/src/index.ts:32`, `packages/contracts/src/index.ts:41`, `packages/contracts/src/index.ts:52`, `packages/contracts/src/index.ts:127`, `apps/api/test/policy.test.ts:49`-`apps/api/test/policy.test.ts:63`).
+
 ## Testes, Seed e Validacao
 
 - Testes de API (`apps/api/test/api.test.ts`):
