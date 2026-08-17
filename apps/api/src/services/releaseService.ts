@@ -42,55 +42,47 @@ function sortReasons(reasons: string[]): string[] {
 }
 
 export function evaluateRelease(data: any): DecisionResult {
-  const hardBlockerReasons: string[] = [];
-
-  if (data.tests.failed > 0) {
-    hardBlockerReasons.push('MANDATORY_TEST_FAILURE');
-  }
-
-  if (data.security.critical > 0) {
-    hardBlockerReasons.push('CRITICAL_SECURITY_VULNERABILITY');
-  }
-
-  if (data.security.high > 0) {
-    hardBlockerReasons.push('HIGH_SECURITY_RISK');
-  }
-
-  if (data.lintErrors > 0) {
-    hardBlockerReasons.push('LINT_ERRORS');
-  }
-
-  if (hardBlockerReasons.length > 0) {
-    return {
-      decision: 'NO_GO',
-      reasons: sortReasons(hardBlockerReasons),
-      policyVersion: POLICY_VERSION,
-    };
-  }
-
+  const reasons: string[] = [];
   const isHotfix = data.releaseType === 'hotfix';
   const reviewMin = isHotfix ? HOTFIX_REVIEW_MIN : STANDARD_REVIEW_MIN;
   const goMin = isHotfix ? HOTFIX_GO_MIN : STANDARD_GO_MIN;
 
-  if (data.coverage < reviewMin) {
-    return {
-      decision: 'NO_GO',
-      reasons: ['COVERAGE_BELOW_MINIMUM'],
-      policyVersion: POLICY_VERSION,
-    };
+  const coverageBelowGoBand = data.coverage < goMin;
+  const coverageBelowReviewBand = data.coverage < reviewMin;
+  const hasFailedMandatoryTests = data.tests.failed > 0;
+  const hasCriticalVulnerabilities = data.security.critical > 0;
+  const hasHighSecurityRisk = data.security.high >= 3;
+  const hasLintErrors = data.lintErrors > 0;
+
+  if (coverageBelowGoBand) {
+    reasons.push('COVERAGE_BELOW_MINIMUM');
   }
 
-  if (data.coverage < goMin) {
-    return {
-      decision: 'REVIEW',
-      reasons: ['COVERAGE_BELOW_MINIMUM'],
-      policyVersion: POLICY_VERSION,
-    };
+  if (hasFailedMandatoryTests) {
+    reasons.push('MANDATORY_TEST_FAILURE');
   }
+
+  if (hasCriticalVulnerabilities) {
+    reasons.push('CRITICAL_SECURITY_VULNERABILITY');
+  }
+
+  if (hasHighSecurityRisk) {
+    reasons.push('HIGH_SECURITY_RISK');
+  }
+
+  if (hasLintErrors) {
+    reasons.push('LINT_ERRORS');
+  }
+
+  const decision = hasFailedMandatoryTests || hasCriticalVulnerabilities || coverageBelowReviewBand
+    ? 'NO_GO'
+    : coverageBelowGoBand || hasHighSecurityRisk || hasLintErrors
+      ? 'REVIEW'
+      : 'GO';
 
   return {
-    decision: 'GO',
-    reasons: [],
+    decision,
+    reasons: sortReasons(reasons),
     policyVersion: POLICY_VERSION,
   };
 }

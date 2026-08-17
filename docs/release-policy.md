@@ -24,7 +24,12 @@ Se qualquer condição abaixo for verdadeira, a decisão final é `NO_GO`:
 
 - `tests.failed > 0` -> `MANDATORY_TEST_FAILURE`
 - `security.critical > 0` -> `CRITICAL_SECURITY_VULNERABILITY`
-- `security.high > 0` -> `HIGH_SECURITY_RISK`
+
+### Sinais de revisão (sem bloqueio duro)
+
+Sem bloqueios duros, os seguintes sinais elevam a decisão para `REVIEW`:
+
+- `security.high >= 3` -> `HIGH_SECURITY_RISK`
 - `lintErrors > 0` -> `LINT_ERRORS`
 
 ### Cobertura (apenas sem bloqueios duros)
@@ -32,16 +37,16 @@ Se qualquer condição abaixo for verdadeira, a decisão final é `NO_GO`:
 Thresholds por tipo de release:
 
 - `standard`
-  - `coverage >= 75` -> `GO`
-  - `70 <= coverage < 75` -> `REVIEW`
+  - `coverage >= 80` -> sem restrição de cobertura
+  - `70 <= coverage < 80` -> `REVIEW`
   - `coverage < 70` -> `NO_GO`
 - `hotfix`
   - `coverage >= 80` -> `GO`
-  - `75 <= coverage < 80` -> `REVIEW`
-  - `coverage < 75` -> `NO_GO`
+  - `65 <= coverage < 80` -> `REVIEW`
+  - `coverage < 65` -> `NO_GO`
 
-Em decisões `REVIEW`, o único reason code é `COVERAGE_BELOW_MINIMUM`.
-Em `NO_GO` por cobertura (sem bloqueios duros), mantém-se `COVERAGE_BELOW_MINIMUM`.
+Quando a cobertura estiver em faixa de revisão, inclui-se `COVERAGE_BELOW_MINIMUM`.
+Em `REVIEW`, todas as razões aplicáveis são devolvidas (cobertura, high risk, lint), respeitando precedência final `NO_GO > REVIEW > GO`.
 
 ### Testes
 
@@ -50,11 +55,11 @@ Em `NO_GO` por cobertura (sem bloqueios duros), mantém-se `COVERAGE_BELOW_MINIM
 ### Segurança
 
 - Vulnerabilidade **critical** bloqueia a release (`CRITICAL_SECURITY_VULNERABILITY`).
-- Vulnerabilidade **high** bloqueia a release (`HIGH_SECURITY_RISK`).
+- Vulnerabilidade **high** com valor `>= 3` eleva para revisão (`HIGH_SECURITY_RISK`) quando não há bloqueio duro.
 
 ### Lint
 
-- Erros de lint bloqueiam a release (`LINT_ERRORS`).
+- Erros de lint elevam para revisão (`LINT_ERRORS`) quando não há bloqueio duro.
 
 ## Ordem das razões
 
@@ -70,7 +75,18 @@ ordem:
 ## Tipos de release
 
 A policy diferencia releases `standard` e `hotfix` na avaliação de cobertura,
-mantendo `hotfix` mais rigoroso.
+com `hotfix` mais permissivo para mitigação de incidentes (CR-01).
+
+## Cenário CR-01
+
+No cenário canónico `hotfix-release` (hotfix com cobertura `67` e restantes
+sinais saudáveis), o resultado esperado é `REVIEW`.
+
+```bash
+npm run simulate:pipeline -- hotfix-release
+```
+
+Uma release `standard` com cobertura `67` continua a resultar em `NO_GO`.
 
 ## Contrato da API
 

@@ -34,8 +34,8 @@ describe('GET /api/v1/policy', () => {
     const res = await app.inject({ method: 'GET', url: '/api/v1/policy' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
-      policyVersion: '1.3.0',
-      minimumCoverage: 75,
+      policyVersion: '1.4.0',
+      minimumCoverage: 70,
       supportedReleaseTypes: ['standard', 'hotfix'],
     });
   });
@@ -64,6 +64,23 @@ describe('POST /api/v1/evaluations', () => {
         ...healthyEvidence,
         releaseId: 'api-test-review-release',
         coverage: 72,
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.decision).toBe('REVIEW');
+    expect(body.reasons).toEqual(['COVERAGE_BELOW_MINIMUM']);
+  });
+
+  it('returns REVIEW for CR-01 hotfix acceptance scenario', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: {
+        ...healthyEvidence,
+        releaseId: 'api-hotfix-cr01',
+        releaseType: 'hotfix',
+        coverage: 67,
       },
     });
     expect(res.statusCode).toBe(201);
@@ -116,9 +133,12 @@ describe('GET /api/v1/statistics', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.total).toBe(18);
-    expect(body.byDecision).toEqual({ GO: 7, REVIEW: 1, NO_GO: 10 });
+    expect(body.byDecision).toEqual({ GO: 10, REVIEW: 4, NO_GO: 4 });
     expect(body.topBlockingReasons).toEqual(
-      expect.arrayContaining([expect.objectContaining({ reason: 'HIGH_SECURITY_RISK' })])
+      expect.arrayContaining([
+        expect.objectContaining({ reason: 'HIGH_SECURITY_RISK' }),
+        expect.objectContaining({ reason: 'LINT_ERRORS' }),
+      ])
     );
     await fresh.close();
   });
