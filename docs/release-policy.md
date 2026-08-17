@@ -13,14 +13,35 @@ uma decisão com as razões aplicáveis.
 | Decisão | Significado |
 |---|---|
 | `GO` | Release aprovada para deployment |
+| `REVIEW` | Release exige gate manual antes de deployment |
 | `NO_GO` | Release bloqueada |
 
 ## Regras em vigor
 
-### Cobertura
+### Bloqueios duros (precedência máxima)
 
-- **Cobertura mínima: 75%.** Cobertura inferior a 75% bloqueia a release
-  (`COVERAGE_BELOW_MINIMUM`).
+Se qualquer condição abaixo for verdadeira, a decisão final é `NO_GO`:
+
+- `tests.failed > 0` -> `MANDATORY_TEST_FAILURE`
+- `security.critical > 0` -> `CRITICAL_SECURITY_VULNERABILITY`
+- `security.high > 0` -> `HIGH_SECURITY_RISK`
+- `lintErrors > 0` -> `LINT_ERRORS`
+
+### Cobertura (apenas sem bloqueios duros)
+
+Thresholds por tipo de release:
+
+- `standard`
+  - `coverage >= 75` -> `GO`
+  - `70 <= coverage < 75` -> `REVIEW`
+  - `coverage < 70` -> `NO_GO`
+- `hotfix`
+  - `coverage >= 80` -> `GO`
+  - `75 <= coverage < 80` -> `REVIEW`
+  - `coverage < 75` -> `NO_GO`
+
+Em decisões `REVIEW`, o único reason code é `COVERAGE_BELOW_MINIMUM`.
+Em `NO_GO` por cobertura (sem bloqueios duros), mantém-se `COVERAGE_BELOW_MINIMUM`.
 
 ### Testes
 
@@ -28,9 +49,8 @@ uma decisão com as razões aplicáveis.
 
 ### Segurança
 
-- Qualquer vulnerabilidade **critical** bloqueia a release (`CRITICAL_SECURITY_VULNERABILITY`).
-- **Qualquer vulnerabilidade high** exige revisão pela equipa de segurança antes
-  do deployment (`HIGH_SECURITY_RISK`).
+- Vulnerabilidade **critical** bloqueia a release (`CRITICAL_SECURITY_VULNERABILITY`).
+- Vulnerabilidade **high** bloqueia a release (`HIGH_SECURITY_RISK`).
 
 ### Lint
 
@@ -44,11 +64,13 @@ ordem:
 1. `COVERAGE_BELOW_MINIMUM`
 2. `MANDATORY_TEST_FAILURE`
 3. `CRITICAL_SECURITY_VULNERABILITY`
-4. `LINT_ERRORS`
+4. `HIGH_SECURITY_RISK`
+5. `LINT_ERRORS`
 
 ## Tipos de release
 
-A policy aplica-se de forma idêntica a releases `standard` e `hotfix`.
+A policy diferencia releases `standard` e `hotfix` na avaliação de cobertura,
+mantendo `hotfix` mais rigoroso.
 
 ## Contrato da API
 

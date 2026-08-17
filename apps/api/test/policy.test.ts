@@ -17,15 +17,34 @@ describe('release policy (baseline)', () => {
     expect(result.reasons).toEqual([]);
   });
 
-  it('approves coverage of 72', () => {
+  it('requires review for standard coverage of 72', () => {
     const result = evaluateRelease({ ...healthy, coverage: 72 });
-    expect(result.decision).toBe('GO');
+    expect(result.decision).toBe('REVIEW');
+    expect(result.reasons).toEqual(['COVERAGE_BELOW_MINIMUM']);
   });
 
-  it('blocks coverage below the minimum', () => {
+  it('blocks standard coverage below review minimum', () => {
     const result = evaluateRelease({ ...healthy, coverage: 63 });
     expect(result.decision).toBe('NO_GO');
-    expect(result.reasons).toContain('COVERAGE_BELOW_MINIMUM');
+    expect(result.reasons).toEqual(['COVERAGE_BELOW_MINIMUM']);
+  });
+
+  it('requires review for hotfix coverage of 77', () => {
+    const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 77 });
+    expect(result.decision).toBe('REVIEW');
+    expect(result.reasons).toEqual(['COVERAGE_BELOW_MINIMUM']);
+  });
+
+  it('approves hotfix coverage of 80', () => {
+    const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 80 });
+    expect(result.decision).toBe('GO');
+    expect(result.reasons).toEqual([]);
+  });
+
+  it('blocks hotfix coverage below review minimum', () => {
+    const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 67 });
+    expect(result.decision).toBe('NO_GO');
+    expect(result.reasons).toEqual(['COVERAGE_BELOW_MINIMUM']);
   });
 
   it('blocks failed mandatory tests', () => {
@@ -40,24 +59,40 @@ describe('release policy (baseline)', () => {
     expect(result.reasons).toContain('CRITICAL_SECURITY_VULNERABILITY');
   });
 
+  it('blocks high vulnerabilities', () => {
+    const result = evaluateRelease({ ...healthy, security: { critical: 0, high: 1 } });
+    expect(result.decision).toBe('NO_GO');
+    expect(result.reasons).toContain('HIGH_SECURITY_RISK');
+  });
+
   it('blocks lint errors', () => {
     const result = evaluateRelease({ ...healthy, lintErrors: 5 });
     expect(result.decision).toBe('NO_GO');
     expect(result.reasons).toContain('LINT_ERRORS');
   });
 
-  it('returns all applicable reasons in a stable order', () => {
+  it('prioritizes hard blockers over coverage', () => {
+    const result = evaluateRelease({
+      ...healthy,
+      coverage: 90,
+      tests: { passed: 10, failed: 2 },
+    });
+    expect(result.decision).toBe('NO_GO');
+    expect(result.reasons).toEqual(['MANDATORY_TEST_FAILURE']);
+  });
+
+  it('returns hard-blocker reasons in canonical order', () => {
     const result = evaluateRelease({
       ...healthy,
       coverage: 60,
       tests: { passed: 10, failed: 3 },
-      security: { critical: 2, high: 0 },
+      security: { critical: 2, high: 1 },
       lintErrors: 7,
     });
     expect(result.reasons).toEqual([
-      'COVERAGE_BELOW_MINIMUM',
       'MANDATORY_TEST_FAILURE',
       'CRITICAL_SECURITY_VULNERABILITY',
+      'HIGH_SECURITY_RISK',
       'LINT_ERRORS',
     ]);
   });
