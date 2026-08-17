@@ -22,6 +22,13 @@ Confirma o baseline antes de qualquer alteração:
 - [ ] Dashboard em `http://localhost:5173` com histórico seed
 - [ ] `npm run simulate:pipeline -- hotfix-release` devolve uma decisão
 
+Policy baseline atual (executavel):
+
+- cobertura `< 60` => `NO_GO`
+- cobertura `60..79` => `REVIEW`
+- cobertura `>= 80` => sem razão de cobertura
+- `security.high > 0` com `security.critical == 0` => `REVIEW`
+
 ## Comandos
 
 | Comando | Descrição |

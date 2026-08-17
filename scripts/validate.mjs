@@ -2,13 +2,45 @@
 // Layered local validator. Reports objective pass/fail per layer without
 // revealing causes or fix locations. Exit code 0 only if every layer passes.
 import { spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const layers = [];
 const t0 = Date.now();
+const npmCliPath = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+const hasBundledNpmCli = existsSync(npmCliPath);
+const NPM_EXECUTABLE = hasBundledNpmCli ? process.execPath : process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const NPM_BASE_ARGS = hasBundledNpmCli ? [npmCliPath] : [];
+
+function spawnNpmSync(args) {
+  return spawnSync(NPM_EXECUTABLE, [...NPM_BASE_ARGS, ...args], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+}
+
+function spawnNpm(args, options) {
+  return spawn(NPM_EXECUTABLE, [...NPM_BASE_ARGS, ...args], options);
+}
+
+async function stopServer(server) {
+  if (server.exitCode !== null) return;
+  server.kill('SIGTERM');
+  await Promise.race([once(server, 'exit'), delay(1200)]);
+  if (server.exitCode !== null) return;
+  if (process.platform === 'win32') {
+    spawnSync('taskkill', ['/pid', String(server.pid), '/t', '/f'], {
+      stdio: ['ignore', 'ignore', 'ignore'],
+    });
+  } else {
+    server.kill('SIGKILL');
+  }
+  await Promise.race([once(server, 'exit'), delay(800)]);
+}
 
 function run(name, command, args) {
-  const res = spawnSync(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  const res = command === 'npm' ? spawnNpmSync(args) : spawnSync(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
   const ok = res.status === 0;
   const out = (res.stdout?.toString() ?? '') + (res.stderr?.toString() ?? '');
   layers.push({ name, ok, tail: out.trim().split('\n').slice(-3).join('\n') });
@@ -26,21 +58,25 @@ console.log('[3/5] testes ...');
 run('testes', 'npm', ['test']);
 
 console.log('[4/5] coverage ...');
-run('coverage', 'npx', ['vitest', 'run', '--coverage']);
+run('coverage', 'npm', ['run', 'coverage']);
 
 console.log('[5/5] smoke funcional ...');
 {
   const PORT = 3199;
   const base = `http://127.0.0.1:${PORT}`;
-  const server = spawn('npx', ['tsx', 'apps/api/src/index.ts'], {
+  const server = spawnNpm(['run', 'start', '-w', 'apps/api'], {
     env: { ...process.env, PORT: String(PORT) },
     stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let startError = null;
+  server.on('error', (err) => {
+    startError = err;
   });
   let ok = true;
   const detail = [];
   try {
     let up = false;
-    for (let i = 0; i < 40 && !up; i++) {
+    for (let i = 0; i < 40 && !up && !startError; i++) {
       await delay(250);
       try {
         const res = await fetch(`${base}/health`);
@@ -49,7 +85,10 @@ console.log('[5/5] smoke funcional ...');
         /* still booting */
       }
     }
-    if (!up) {
+    if (startError) {
+      ok = false;
+      detail.push(`a API nao arrancou: ${startError.message}`);
+    } else if (!up) {
       ok = false;
       detail.push('a API não arrancou');
     } else {
@@ -90,7 +129,7 @@ console.log('[5/5] smoke funcional ...');
     ok = false;
     detail.push(`erro inesperado: ${e.message}`);
   } finally {
-    server.kill('SIGTERM');
+    await stopServer(server);
   }
   layers.push({ name: 'smoke funcional', ok, tail: detail.join('; ') });
 }

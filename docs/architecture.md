@@ -31,6 +31,12 @@ Serviço Fastify em TypeScript. Expõe:
 O motor de decisão vive em `apps/api/src/services/releaseService.ts`; os limiares
 da policy estão em `apps/api/src/constants.ts`.
 
+Policy efetiva (baseline executavel):
+
+- cobertura `< 60` => `NO_GO` (`COVERAGE_BELOW_MINIMUM`)
+- cobertura `60..79` => `REVIEW` (`COVERAGE_REQUIRES_REVIEW`)
+- `security.high > 0` com `security.critical == 0` => `REVIEW` (`HIGH_SECURITY_RISK`)
+
 ### Dashboard (`apps/dashboard`)
 
 React/Vite. Consome exclusivamente a API. Mostra contadores por decisão,

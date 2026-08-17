@@ -35,7 +35,7 @@ describe('GET /api/v1/policy', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
       policyVersion: '1.2.0',
-      minimumCoverage: 70,
+      minimumCoverage: 60,
       supportedReleaseTypes: ['standard', 'hotfix'],
     });
   });
@@ -63,6 +63,34 @@ describe('POST /api/v1/evaluations', () => {
       payload: { releaseId: 'broken' },
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  it('returns REVIEW for coverage between 60 and 79', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: { ...healthyEvidence, coverage: 75 },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.decision).toBe('REVIEW');
+    expect(body.reasons).toContain('COVERAGE_REQUIRES_REVIEW');
+  });
+
+  it('returns REVIEW for high vulnerabilities without critical findings', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: {
+        ...healthyEvidence,
+        coverage: 85,
+        security: { critical: 0, high: 2 },
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.decision).toBe('REVIEW');
+    expect(body.reasons).toContain('HIGH_SECURITY_RISK');
   });
 });
 
@@ -100,7 +128,7 @@ describe('GET /api/v1/statistics', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.total).toBe(18);
-    expect(body.byDecision).toEqual({ GO: 13, REVIEW: 0, NO_GO: 5 });
+    expect(body.byDecision).toEqual({ GO: 7, REVIEW: 8, NO_GO: 3 });
     await fresh.close();
   });
 });

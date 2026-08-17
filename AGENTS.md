@@ -4,8 +4,18 @@ Projeto: serviço de release readiness consumido por pipelines CI/CD.
 
 ## Fonte de verdade
 
-- Este repo foi desenhado com inconsistencias entre docs e implementacao; para mudar comportamento, priorize `apps/api/src/**`, `apps/api/test/**`, `packages/contracts/src/index.ts` e `scripts/validate.mjs`.
-- Exemplo real de drift: `docs/release-policy.md` cita cobertura minima 75, mas a implementacao e testes estao em 70 (`apps/api/src/constants.ts`, `apps/api/test/policy.test.ts`).
+- Para comportamento executavel, priorize `apps/api/src/**`, `apps/api/test/**`, `packages/contracts/src/index.ts` e `scripts/validate.mjs`.
+- Docs podem divergir: confirme sempre no codigo/testes antes de alterar regras de policy.
+
+## Mudanca OpenSpec ativa
+
+- Change atual: `openspec/changes/introduce-review-verdict/` (consulte `proposal.md`, `specs/release-policy/spec.md`, `design.md`, `tasks.md`).
+- Target dessa change (ainda pode nao estar no baseline executavel):
+  - cobertura `< 60` => `NO_GO` (`COVERAGE_BELOW_MINIMUM`)
+  - cobertura `60..79` => `REVIEW` (`COVERAGE_REQUIRES_REVIEW`)
+  - cobertura `>= 80` => sem razao de cobertura
+  - `security.high > 0` com `security.critical == 0` => `REVIEW` (`HIGH_SECURITY_RISK`)
+- Ao implementar a change, atualize em conjunto backend + contratos + testes + docs para evitar drift.
 
 ## Layout que importa
 
@@ -34,6 +44,7 @@ Projeto: serviço de release readiness consumido por pipelines CI/CD.
 - Contrato de `POST /api/v1/evaluations` e schemas em `packages/contracts/src/index.ts` sao estaveis; nao mude shape de request/response sem atualizar consumidores e testes.
 - Mudancas de policy devem ficar no backend (`apps/api/src/constants.ts` e `apps/api/src/services/releaseService.ts`), nao no dashboard/simulador.
 - Historico e deterministico em memoria com 18 seeds (`apps/api/src/seeds/seedData.ts`); alteracoes de policy afetam testes de API e estatisticas.
+- Quando alterar reasons/decisions, sincronize: `packages/contracts/src/index.ts`, `apps/api/test/policy.test.ts`, `apps/api/test/api.test.ts`, `docs/release-policy.md`.
 
 ## Testes e limites atuais
 
