@@ -128,7 +128,7 @@ This is not a bug by itself, but it is a deliberate mismatch between "example pa
 ## C1 (coverage 75 vs 70)
 
 - Trusted source: implementation + tests + constants (`apps/api/src/services/releaseService.ts:19`, `apps/api/src/constants.ts:5`, `apps/api/test/policy.test.ts:20`-`apps/api/test/policy.test.ts:29`, `apps/api/test/api.test.ts:38`).
-- Why: executable behavior and automated assertions agree on 70; docs are stale.
+- Why: codigo e testes oncordam em 70 e sao executaveis; docs divergem, sem evidencia historica que arbitre qual era a intencao.
 
 ## C2 (`REVIEW` in contract but unreachable)
 
@@ -222,3 +222,46 @@ Com a alteracao concreta do ponto (b), o teste que quebra inevitavelmente e:
   - Com EV-0016 a virar `REVIEW`, o valor real passa a `{ GO: 13, REVIEW: 1, NO_GO: 4 }`.
 
 No estado atual dos testes, nao ha outro teste que falhe inevitavelmente so por existir um caminho `REVIEW`. Os testes de policy em `apps/api/test/policy.test.ts:13`-`apps/api/test/policy.test.ts:64` nao usam fixture com `critical > 0 && high > 0`, portanto nao capturam diretamente o caso de override descrito em (b).
+
+## 7) Ancoras de resolucao
+
+### 7.1 Git history
+
+Comandos executados:
+
+```bash
+git log --all --oneline -S'70' -- apps/api/src/services/releaseService.ts
+git log --all --oneline -S'75' -- docs/release-policy.md
+```
+
+Output real:
+
+```text
+074b79c chore: initial commit
+074b79c chore: initial commit
+```
+
+Conclusao: os dois sinais (`70` no engine e `75` nos docs) entram no mesmo commit historico (`074b79c`). Logo, o historico por si so nao arbitra o conflito entre 70 e 75.
+
+### 7.2 `examples/*.json` vs limiar 70 e limiar 75
+
+| Cenario | Coverage | Decisao com engine atual (limiar 70) | Decisao hipotetica com limiar 75 |
+|---|---:|---|---|
+| `healthy-release` (`examples/healthy-release.json`) | 84 | GO | GO |
+| `low-coverage` (`examples/low-coverage.json`) | 63 | NO_GO | NO_GO |
+| `critical-security` (`examples/critical-security.json`) | 79 | NO_GO (critical > 0) | NO_GO (critical > 0) |
+| `incomplete-evidence` (`examples/incomplete-evidence.json`) | null | NO_GO no engine puro (`null < 70`), mas 400 na fronteira HTTP | NO_GO no engine puro (`null < 75`), mas 400 na fronteira HTTP |
+| `hotfix-release` (`examples/hotfix-release.json`) | 67 | NO_GO | NO_GO |
+
+Referencias das evidencias: `examples/healthy-release.json:5`, `examples/low-coverage.json:5`, `examples/critical-security.json:5`-`examples/critical-security.json:6`, `examples/incomplete-evidence.json:5`, `examples/hotfix-release.json:5`. Regras de decisao atuais: `apps/api/src/services/releaseService.ts:19`-`apps/api/src/services/releaseService.ts:48`. Rejeicao 400 para evidencias invalidas no caminho HTTP: `packages/contracts/src/index.ts:106`, `scripts/simulate-pipeline.cjs:62`-`scripts/simulate-pipeline.cjs:68`.
+
+Conclusao: nenhum dos 5 cenarios distingue limiar 70 de limiar 75.
+
+### 7.3 Consequencia
+
+Com a evidencia existente (codigo, testes, docs, examples, historico), o conflito 70 vs 75 nao e resoluvel de forma objetiva. E uma decisao de produto/policy a tomar e documentar explicitamente na mudanca OpenSpec.
+
+### 7.4 Sinais de desenho nos `examples`
+
+- `hotfix-release` (`examples/hotfix-release.json:3`-`examples/hotfix-release.json:6`) e o sinal mais natural para uma futura faixa `REVIEW` se a policy passar a distinguir `hotfix` de `standard`.
+- Para vulnerabilidades `high`, nao existe hoje um cenario "high sem critical" em `examples/*.json`; o mais proximo e `critical-security` (`examples/critical-security.json:6`), mas com `critical: 1` deve continuar `NO_GO` quando se mantem a precedencia de `NO_GO`.
