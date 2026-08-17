@@ -5,8 +5,13 @@
  * The decision contract is consumed by CI pipelines — treat the response
  * shape as frozen (see packages/contracts).
  */
-import { POLICY_VERSION, MINIMUM_COVERAGE } from '../constants.js';
 import type { Decision, ReleaseEvidence } from '@release-guardian/contracts';
+import {
+  POLICY_VERSION,
+  MINIMUM_COVERAGE,
+  COVERAGE_REVIEW_THRESHOLD,
+  COVERAGE_BLOCK_THRESHOLD_BY_RELEASE_TYPE,
+} from '../constants.js';
 
 export interface DecisionResult {
   decision: Decision;
@@ -14,40 +19,42 @@ export interface DecisionResult {
   policyVersion: string;
 }
 
-const BLOCKING_REASONS = new Set([
-  'COVERAGE_BELOW_MINIMUM',
-  'MANDATORY_TEST_FAILURE',
-  'CRITICAL_SECURITY_VULNERABILITY',
-  'LINT_ERRORS',
-]);
-
 export function evaluateRelease(data: ReleaseEvidence): DecisionResult {
   const reasons: string[] = [];
 
-  if (data.coverage < MINIMUM_COVERAGE) {
+  const coverageBlockThreshold =
+    COVERAGE_BLOCK_THRESHOLD_BY_RELEASE_TYPE[data.releaseType] ?? MINIMUM_COVERAGE;
+  const coverageIsBlocking = data.coverage < coverageBlockThreshold;
+  const coverageIsReview = !coverageIsBlocking && data.coverage < COVERAGE_REVIEW_THRESHOLD;
+  const testsAreBlocking = data.tests.failed > 0;
+  const criticalIsBlocking = data.security.critical > 0;
+  const lintIsReview = data.lintErrors > 0;
+  const highRiskIsReview = data.security.high >= 3;
+
+  if (coverageIsBlocking || coverageIsReview) {
     reasons.push('COVERAGE_BELOW_MINIMUM');
   }
 
-  if (data.tests.failed > 0) {
+  if (testsAreBlocking) {
     reasons.push('MANDATORY_TEST_FAILURE');
   }
 
-  if (data.security.critical > 0) {
+  if (criticalIsBlocking) {
     reasons.push('CRITICAL_SECURITY_VULNERABILITY');
   }
 
-  if (data.lintErrors > 0) {
+  if (lintIsReview) {
     reasons.push('LINT_ERRORS');
   }
 
-  if (data.security.critical === 0 && data.security.high > 0) {
+  if (highRiskIsReview) {
     reasons.push('HIGH_SECURITY_RISK');
   }
 
   let decision: Decision = 'GO';
-  if (reasons.some((reason) => BLOCKING_REASONS.has(reason))) {
+  if (coverageIsBlocking || testsAreBlocking || criticalIsBlocking) {
     decision = 'NO_GO';
-  } else if (reasons.includes('HIGH_SECURITY_RISK')) {
+  } else if (coverageIsReview || lintIsReview || highRiskIsReview) {
     decision = 'REVIEW';
   }
 

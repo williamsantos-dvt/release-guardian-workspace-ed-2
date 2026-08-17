@@ -18,16 +18,28 @@ describe('release policy', () => {
     expect(result.reasons).toEqual([]);
   });
 
-  it('blocks coverage of 72 under the 75 minimum', () => {
+  it('reviews standard coverage in the 70-79.99 band', () => {
     const result = evaluateRelease({ ...healthy, coverage: 72 });
-    expect(result.decision).toBe('NO_GO');
+    expect(result.decision).toBe('REVIEW');
     expect(result.reasons).toEqual(['COVERAGE_BELOW_MINIMUM']);
   });
 
-  it('blocks coverage below the minimum', () => {
+  it('blocks standard coverage below 70', () => {
     const result = evaluateRelease({ ...healthy, coverage: 63 });
     expect(result.decision).toBe('NO_GO');
     expect(result.reasons).toContain('COVERAGE_BELOW_MINIMUM');
+  });
+
+  it('reviews hotfix coverage in the 65-79.99 band', () => {
+    const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 67 });
+    expect(result.decision).toBe('REVIEW');
+    expect(result.reasons).toEqual(['COVERAGE_BELOW_MINIMUM']);
+  });
+
+  it('blocks hotfix coverage below 65', () => {
+    const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 64 });
+    expect(result.decision).toBe('NO_GO');
+    expect(result.reasons).toEqual(['COVERAGE_BELOW_MINIMUM']);
   });
 
   it('blocks failed mandatory tests', () => {
@@ -42,21 +54,27 @@ describe('release policy', () => {
     expect(result.reasons).toContain('CRITICAL_SECURITY_VULNERABILITY');
   });
 
-  it('requires REVIEW for high vulnerabilities without critical findings', () => {
-    const result = evaluateRelease({ ...healthy, security: { critical: 0, high: 2 } });
+  it('requires REVIEW for high vulnerabilities at threshold without critical findings', () => {
+    const result = evaluateRelease({ ...healthy, security: { critical: 0, high: 3 } });
     expect(result.decision).toBe('REVIEW');
     expect(result.reasons).toEqual(['HIGH_SECURITY_RISK']);
   });
 
-  it('keeps NO_GO and omits high-risk review reason when critical vulnerabilities exist', () => {
-    const result = evaluateRelease({ ...healthy, security: { critical: 1, high: 2 } });
-    expect(result.decision).toBe('NO_GO');
-    expect(result.reasons).toEqual(['CRITICAL_SECURITY_VULNERABILITY']);
+  it('does not review high vulnerabilities below threshold', () => {
+    const result = evaluateRelease({ ...healthy, security: { critical: 0, high: 2 } });
+    expect(result.decision).toBe('GO');
+    expect(result.reasons).toEqual([]);
   });
 
-  it('blocks lint errors', () => {
-    const result = evaluateRelease({ ...healthy, lintErrors: 5 });
+  it('keeps NO_GO and still reports high-risk review reason when critical vulnerabilities exist', () => {
+    const result = evaluateRelease({ ...healthy, security: { critical: 1, high: 4 } });
     expect(result.decision).toBe('NO_GO');
+    expect(result.reasons).toEqual(['CRITICAL_SECURITY_VULNERABILITY', 'HIGH_SECURITY_RISK']);
+  });
+
+  it('reviews lint errors when no blocker is present', () => {
+    const result = evaluateRelease({ ...healthy, lintErrors: 5 });
+    expect(result.decision).toBe('REVIEW');
     expect(result.reasons).toContain('LINT_ERRORS');
   });
 
@@ -65,7 +83,7 @@ describe('release policy', () => {
       ...healthy,
       coverage: 60,
       tests: { passed: 10, failed: 3 },
-      security: { critical: 2, high: 2 },
+      security: { critical: 2, high: 4 },
       lintErrors: 7,
     });
     expect(result.reasons).toEqual([
@@ -73,6 +91,7 @@ describe('release policy', () => {
       'MANDATORY_TEST_FAILURE',
       'CRITICAL_SECURITY_VULNERABILITY',
       'LINT_ERRORS',
+      'HIGH_SECURITY_RISK',
     ]);
   });
 
@@ -81,7 +100,7 @@ describe('release policy', () => {
       ...healthy,
       coverage: 60,
       tests: { passed: 10, failed: 3 },
-      security: { critical: 0, high: 2 },
+      security: { critical: 0, high: 4 },
       lintErrors: 7,
     });
     expect(result.decision).toBe('NO_GO');

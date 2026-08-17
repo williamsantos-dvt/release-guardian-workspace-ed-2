@@ -34,8 +34,8 @@ describe('GET /api/v1/policy', () => {
     const res = await app.inject({ method: 'GET', url: '/api/v1/policy' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
-      policyVersion: '1.3.0',
-      minimumCoverage: 75,
+      policyVersion: '1.4.0',
+      minimumCoverage: 70,
       supportedReleaseTypes: ['standard', 'hotfix'],
     });
   });
@@ -56,20 +56,54 @@ describe('POST /api/v1/evaluations', () => {
     expect(body.evaluationId).toMatch(/^EV-\d{4}$/);
   });
 
-  it('returns REVIEW for high vulnerabilities with no critical findings', async () => {
+  it('returns REVIEW for high vulnerabilities at threshold with no critical findings', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/v1/evaluations',
       payload: {
         ...healthyEvidence,
         releaseId: 'api-test-review',
-        security: { critical: 0, high: 2 },
+        security: { critical: 0, high: 3 },
       },
     });
     expect(res.statusCode).toBe(201);
     const body = res.json();
     expect(body.decision).toBe('REVIEW');
     expect(body.reasons).toEqual(['HIGH_SECURITY_RISK']);
+  });
+
+  it('matches canonical CR-01 hotfix behavior at coverage 67', async () => {
+    const hotfix = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: {
+        ...healthyEvidence,
+        releaseId: 'api-test-hotfix-67',
+        releaseType: 'hotfix',
+        coverage: 67,
+      },
+    });
+    expect(hotfix.statusCode).toBe(201);
+    expect(hotfix.json()).toMatchObject({
+      decision: 'REVIEW',
+      reasons: ['COVERAGE_BELOW_MINIMUM'],
+    });
+
+    const standard = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: {
+        ...healthyEvidence,
+        releaseId: 'api-test-standard-67',
+        releaseType: 'standard',
+        coverage: 67,
+      },
+    });
+    expect(standard.statusCode).toBe(201);
+    expect(standard.json()).toMatchObject({
+      decision: 'NO_GO',
+      reasons: ['COVERAGE_BELOW_MINIMUM'],
+    });
   });
 
   it('rejects an incomplete payload with 400', async () => {
@@ -116,7 +150,7 @@ describe('GET /api/v1/statistics', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.total).toBe(18);
-    expect(body.byDecision).toEqual({ GO: 7, REVIEW: 5, NO_GO: 6 });
+    expect(body.byDecision).toEqual({ GO: 10, REVIEW: 4, NO_GO: 4 });
     await fresh.close();
   });
 });
