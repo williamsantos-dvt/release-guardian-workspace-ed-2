@@ -31,6 +31,13 @@ Serviço Fastify em TypeScript. Expõe:
 O motor de decisão vive em `apps/api/src/services/releaseService.ts`; os limiares
 da policy estão em `apps/api/src/constants.ts`.
 
+Na policy atual:
+
+- Cobertura mínima é 75%; abaixo disso a release é `NO_GO`.
+- Vulnerabilidades `critical` geram `NO_GO`.
+- Vulnerabilidades `high` sem `critical` geram `REVIEW`.
+- Falhas de testes mandatórios e erros de lint geram `NO_GO`.
+
 ### Dashboard (`apps/dashboard`)
 
 React/Vite. Consome exclusivamente a API. Mostra contadores por decisão,

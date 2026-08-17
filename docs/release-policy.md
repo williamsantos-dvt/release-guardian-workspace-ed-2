@@ -13,6 +13,7 @@ uma decisão com as razões aplicáveis.
 | Decisão | Significado |
 |---|---|
 | `GO` | Release aprovada para deployment |
+| `REVIEW` | Release requer aprovação manual antes do deployment |
 | `NO_GO` | Release bloqueada |
 
 ## Regras em vigor
@@ -29,8 +30,8 @@ uma decisão com as razões aplicáveis.
 ### Segurança
 
 - Qualquer vulnerabilidade **critical** bloqueia a release (`CRITICAL_SECURITY_VULNERABILITY`).
-- **Qualquer vulnerabilidade high** exige revisão pela equipa de segurança antes
-  do deployment (`HIGH_SECURITY_RISK`).
+- Vulnerabilidades **high** sem findings critical exigem revisão pela equipa de
+  segurança (`HIGH_SECURITY_RISK`).
 
 ### Lint
 
@@ -45,6 +46,16 @@ ordem:
 2. `MANDATORY_TEST_FAILURE`
 3. `CRITICAL_SECURITY_VULNERABILITY`
 4. `LINT_ERRORS`
+5. `HIGH_SECURITY_RISK`
+
+## Composição da decisão
+
+- Se existir pelo menos uma razão bloqueante (`COVERAGE_BELOW_MINIMUM`,
+  `MANDATORY_TEST_FAILURE`, `CRITICAL_SECURITY_VULNERABILITY`, `LINT_ERRORS`),
+  a decisão final é `NO_GO`.
+- Se não existir razão bloqueante, mas existir `HIGH_SECURITY_RISK`, a decisão
+  final é `REVIEW`.
+- Sem razões, a decisão final é `GO`.
 
 ## Tipos de release
 
