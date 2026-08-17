@@ -34,7 +34,7 @@ describe('GET /api/v1/policy', () => {
     const res = await app.inject({ method: 'GET', url: '/api/v1/policy' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
-      policyVersion: '1.2.0',
+      policyVersion: '1.3.0',
       minimumCoverage: 70,
       supportedReleaseTypes: ['standard', 'hotfix'],
     });
