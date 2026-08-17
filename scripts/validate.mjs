@@ -6,9 +6,23 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 const layers = [];
 const t0 = Date.now();
+const isWindows = process.platform === 'win32';
+
+function quoteArgument(arg) {
+  return /[\s"^&|<>]/.test(arg) ? `"${arg.replace(/"/g, '\\"')}"` : arg;
+}
+
+function prepareCommand(command, args, forceShell = false) {
+  if (!isWindows || !forceShell) {
+    return { command, args };
+  }
+  const joined = [command, ...args].map(quoteArgument).join(' ');
+  return { command: 'cmd.exe', args: ['/d', '/s', '/c', joined] };
+}
 
 function run(name, command, args) {
-  const res = spawnSync(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+  const { command: program, args: finalArgs } = prepareCommand(command, args, isWindows);
+  const res = spawnSync(program, finalArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
   const ok = res.status === 0;
   const out = (res.stdout?.toString() ?? '') + (res.stderr?.toString() ?? '');
   layers.push({ name, ok, tail: out.trim().split('\n').slice(-3).join('\n') });
@@ -32,15 +46,31 @@ console.log('[5/5] smoke funcional ...');
 {
   const PORT = 3199;
   const base = `http://127.0.0.1:${PORT}`;
-  const server = spawn('npx', ['tsx', 'apps/api/src/index.ts'], {
+  const { command: spawnCommand, args: spawnArgs } = prepareCommand(
+    'npx',
+    ['tsx', 'apps/api/src/index.ts'],
+    isWindows
+  );
+  const server = spawn(spawnCommand, spawnArgs, {
     env: { ...process.env, PORT: String(PORT) },
     stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let spawnError = null;
+  server.on('error', (error) => {
+    spawnError = error;
   });
   let ok = true;
   const detail = [];
   try {
+    if (spawnError) {
+      ok = false;
+      detail.push(`falha ao iniciar API: ${spawnError.message}`);
+    }
     let up = false;
     for (let i = 0; i < 40 && !up; i++) {
+      if (spawnError) {
+        break;
+      }
       await delay(250);
       try {
         const res = await fetch(`${base}/health`);
@@ -90,7 +120,9 @@ console.log('[5/5] smoke funcional ...');
     ok = false;
     detail.push(`erro inesperado: ${e.message}`);
   } finally {
-    server.kill('SIGTERM');
+    if (server.pid) {
+      server.kill('SIGTERM');
+    }
   }
   layers.push({ name: 'smoke funcional', ok, tail: detail.join('; ') });
 }
