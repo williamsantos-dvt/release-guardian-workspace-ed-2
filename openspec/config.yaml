@@ -1,32 +1,22 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Release Guardian — servico de release readiness para pipelines CI/CD.
+  Monorepo npm workspaces: apps/api (Fastify), apps/dashboard (React/Vite),
+  packages/contracts (fonte unica de tipos e JSON Schemas), scripts/, examples/.
+  Motor de decisao: apps/api/src/services/releaseService.ts (evaluateRelease).
+  Invariantes obrigatorios da policy: ver seccao "Invariantes da Release Policy"
+  em AGENTS.md. Investigacao do baseline: docs/investigation/01-findings.md.
+  Gate de readiness: npm run validate.
+  O contrato request/response de POST /api/v1/evaluations e imutavel.
+  Proibido alterar apps/dashboard/** e scripts/simulate-pipeline.cjs.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
-
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+rules:
+  proposal:
+    - Indicar explicitamente que seeds mudam de decisao e o novo byDecision
+  spec:
+    - Cada requisito tem de ser verificavel por um teste nomeado
+    - Cobrir sempre o caso de precedencia NO_GO sobre REVIEW
+  tasks:
+    - Separar a extracao do literal 70 para MINIMUM_COVERAGE numa task propria
+    - Incluir uma task de recalculo do snapshot em api.test.ts:103
