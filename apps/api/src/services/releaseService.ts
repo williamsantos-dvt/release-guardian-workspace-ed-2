@@ -6,9 +6,10 @@
  * shape as frozen (see packages/contracts).
  */
 import { POLICY_VERSION, MINIMUM_COVERAGE } from '../constants.js';
+import type { Decision } from '@release-guardian/contracts';
 
 export interface DecisionResult {
-  decision: 'GO' | 'REVIEW' | 'NO_GO';
+  decision: Decision;
   reasons: string[];
   policyVersion: string;
 }
@@ -43,7 +44,7 @@ export function evaluateRelease(data: any): DecisionResult {
     reasons.includes('CRITICAL_SECURITY_VULNERABILITY') ||
     reasons.includes('LINT_ERRORS');
 
-  let decision: 'GO' | 'REVIEW' | 'NO_GO' = 'GO';
+  let decision: Decision = 'GO';
   if (hasBlockingReason) {
     decision = 'NO_GO';
   } else if (reasons.includes('HIGH_SECURITY_RISK')) {
