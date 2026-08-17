@@ -1,7 +1,7 @@
 # Release Policy — Referência Funcional
 
 > Documentação de referência da release policy do Release Guardian.
-> Última revisão conhecida: atualização maior da policy (ver changelog interno).
+> Última revisão conhecida: policy `1.3.0`.
 
 ## Visão geral
 
@@ -13,14 +13,16 @@ uma decisão com as razões aplicáveis.
 | Decisão | Significado |
 |---|---|
 | `GO` | Release aprovada para deployment |
+| `REVIEW` | Release requer aprovação manual antes do deployment |
 | `NO_GO` | Release bloqueada |
 
 ## Regras em vigor
 
 ### Cobertura
 
-- **Cobertura mínima: 75%.** Cobertura inferior a 75% bloqueia a release
-  (`COVERAGE_BELOW_MINIMUM`).
+- `coverage < 60` bloqueia a release (`COVERAGE_BELOW_MINIMUM`).
+- `60 <= coverage < 80` exige revisão manual (`COVERAGE_REQUIRES_REVIEW`).
+- `coverage >= 80` não gera razão de cobertura.
 
 ### Testes
 
@@ -29,8 +31,7 @@ uma decisão com as razões aplicáveis.
 ### Segurança
 
 - Qualquer vulnerabilidade **critical** bloqueia a release (`CRITICAL_SECURITY_VULNERABILITY`).
-- **Qualquer vulnerabilidade high** exige revisão pela equipa de segurança antes
-  do deployment (`HIGH_SECURITY_RISK`).
+- Vulnerabilidades **high** não alteram a decisão na policy `1.3.0`.
 
 ### Lint
 
@@ -44,7 +45,8 @@ ordem:
 1. `COVERAGE_BELOW_MINIMUM`
 2. `MANDATORY_TEST_FAILURE`
 3. `CRITICAL_SECURITY_VULNERABILITY`
-4. `LINT_ERRORS`
+4. `COVERAGE_REQUIRES_REVIEW`
+5. `LINT_ERRORS`
 
 ## Tipos de release
 

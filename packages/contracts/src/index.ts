@@ -6,7 +6,7 @@
  * here; duplicating these shapes in a consumer is a contract drift bug.
  */
 
-/** Final decision for a release. NOTE: the baseline engine only emits GO / NO_GO. REVIEW is part of the public contract (dashboard and simulator already render it) but is only produced after the policy is evolved. */
+/** Final decision for a release. */
 export type Decision = 'GO' | 'REVIEW' | 'NO_GO';
 
 /** Supported release types. */
@@ -28,6 +28,7 @@ export const REASON_CODES = [
   'COVERAGE_BELOW_MINIMUM',
   'MANDATORY_TEST_FAILURE',
   'CRITICAL_SECURITY_VULNERABILITY',
+  'COVERAGE_REQUIRES_REVIEW',
   'LINT_ERRORS',
 ] as const;
 

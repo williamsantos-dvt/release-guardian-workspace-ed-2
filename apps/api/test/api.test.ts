@@ -34,8 +34,8 @@ describe('GET /api/v1/policy', () => {
     const res = await app.inject({ method: 'GET', url: '/api/v1/policy' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
-      policyVersion: '1.2.0',
-      minimumCoverage: 70,
+      policyVersion: '1.3.0',
+      minimumCoverage: 60,
       supportedReleaseTypes: ['standard', 'hotfix'],
     });
   });
@@ -54,6 +54,21 @@ describe('POST /api/v1/evaluations', () => {
     expect(body.reasons).toEqual([]);
     expect(body.releaseId).toBe('api-test-release');
     expect(body.evaluationId).toMatch(/^EV-\d{4}$/);
+  });
+
+  it('returns REVIEW for a release in the coverage review band', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: { ...healthyEvidence, releaseId: 'api-review-release', coverage: 75 },
+    });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({
+      releaseId: 'api-review-release',
+      decision: 'REVIEW',
+      reasons: ['COVERAGE_REQUIRES_REVIEW'],
+    });
   });
 
   it('rejects an incomplete payload with 400', async () => {
@@ -100,7 +115,7 @@ describe('GET /api/v1/statistics', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.total).toBe(18);
-    expect(body.byDecision).toEqual({ GO: 13, REVIEW: 0, NO_GO: 5 });
+    expect(body.byDecision).toEqual({ GO: 10, REVIEW: 5, NO_GO: 3 });
     await fresh.close();
   });
 });

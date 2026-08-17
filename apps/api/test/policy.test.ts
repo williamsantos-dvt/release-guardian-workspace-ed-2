@@ -10,20 +10,27 @@ const healthy = {
   lintErrors: 0,
 };
 
-describe('release policy (baseline)', () => {
+describe('release policy (1.3.0)', () => {
   it('approves a healthy release', () => {
     const result = evaluateRelease(healthy);
     expect(result.decision).toBe('GO');
     expect(result.reasons).toEqual([]);
   });
 
-  it('approves coverage of 72', () => {
+  it('returns REVIEW for coverage of 72', () => {
     const result = evaluateRelease({ ...healthy, coverage: 72 });
-    expect(result.decision).toBe('GO');
+    expect(result.decision).toBe('REVIEW');
+    expect(result.reasons).toEqual(['COVERAGE_REQUIRES_REVIEW']);
   });
 
-  it('blocks coverage below the minimum', () => {
+  it('returns REVIEW for coverage of 63', () => {
     const result = evaluateRelease({ ...healthy, coverage: 63 });
+    expect(result.decision).toBe('REVIEW');
+    expect(result.reasons).toEqual(['COVERAGE_REQUIRES_REVIEW']);
+  });
+
+  it('blocks coverage below 60', () => {
+    const result = evaluateRelease({ ...healthy, coverage: 55 });
     expect(result.decision).toBe('NO_GO');
     expect(result.reasons).toContain('COVERAGE_BELOW_MINIMUM');
   });
@@ -49,15 +56,15 @@ describe('release policy (baseline)', () => {
   it('returns all applicable reasons in a stable order', () => {
     const result = evaluateRelease({
       ...healthy,
-      coverage: 60,
+      coverage: 75,
       tests: { passed: 10, failed: 3 },
       security: { critical: 2, high: 0 },
       lintErrors: 7,
     });
     expect(result.reasons).toEqual([
-      'COVERAGE_BELOW_MINIMUM',
       'MANDATORY_TEST_FAILURE',
       'CRITICAL_SECURITY_VULNERABILITY',
+      'COVERAGE_REQUIRES_REVIEW',
       'LINT_ERRORS',
     ]);
   });
