@@ -1,5 +1,28 @@
 schema: spec-driven
 
+context: |
+  Release Guardian: serviço interno de release readiness. Pipelines CI submetem
+  evidências (testes, cobertura, vulnerabilidades, lint) e o serviço aplica a
+  release policy, devolvendo GO / REVIEW / NO_GO com razões auditáveis.
+
+  Stack: TypeScript, Fastify, Vitest, React/Vite. Monorepo com npm workspaces.
+  Conventional commits.
+
+  Restrições: o contrato HTTP de POST /api/v1/evaluations está congelado.
+  packages/contracts é a única fonte de verdade das formas trocadas. Toda a
+  lógica de decisão vive em apps/api/src/services/releaseService.ts. O dashboard
+  e o simulador são observação, não implementação.
+
+  A capability afetada é a release policy / motor de decisão.
+
+rules:
+  proposal:
+    - Incluir sempre uma secção Non-goals
+  spec:
+    - Critérios de aceitação em valores de fronteira, nunca em casos saudáveis
+    - Definir precedência entre vereditos quando várias regras se aplicam
+
+
 # Project context (optional)
 # This is shown to AI when creating artifacts.
 # Add your tech stack, conventions, style guides, domain knowledge, etc.

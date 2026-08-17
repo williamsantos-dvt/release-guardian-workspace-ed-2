@@ -1,7 +1,8 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "instructions": [
-    "../instructions/*.md"
+    ".opencode/instructions/*.md",
+    "./instructions/*.md"
   ],
   "model": "azure-cognitive-services/gpt-5.1",
   "small_model": "azure-cognitive-services/gpt-5-mini",
@@ -44,7 +45,7 @@
       "name": "Azure Cognitive Services (xTEAM)",
       "options": {
         "apiKey": "{file:./azure.token}",
-        "resourceName": "dvtpt-ct-xteam-cpt-xxx-fndy"
+        "resourceName": "dvtpt-ct-xteam-cpt-drupal-fndy"
       },
       "whitelist": [
         "gpt-5-mini",
