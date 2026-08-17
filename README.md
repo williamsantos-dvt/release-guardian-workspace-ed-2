@@ -29,7 +29,7 @@ Confirma o baseline antes de qualquer alteração:
 | `npm run dev` | API (Fastify) + dashboard (Vite) em modo dev |
 | `npm test` | Suite de testes do projeto |
 | `npm run validate` | Validação em camadas: typecheck → lint → testes → coverage → smoke funcional |
-| `npm run simulate:pipeline -- <cenário>` | Simulador de pipeline CI (`healthy-release`, `low-coverage`, `critical-security`, `incomplete-evidence`, `hotfix-release`) |
+| `npm run simulate:pipeline -- <cenário>` | Simulador de pipeline CI (`healthy-release`, `low-coverage`, `critical-security`, `review-security`, `incomplete-evidence`, `hotfix-release`) |
 | `npm run typecheck` / `npm run lint` | Verificações individuais |
 
 ## A missão

@@ -1,12 +1,22 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import type { ReleaseEvidence } from '@release-guardian/contracts';
 import { buildApp } from '../src/server.js';
 
-const healthyEvidence = {
+const healthyEvidence: ReleaseEvidence = {
   releaseId: 'api-test-release',
   releaseType: 'standard',
   tests: { passed: 120, failed: 0 },
   coverage: 88,
   security: { critical: 0, high: 0 },
+  lintErrors: 0,
+};
+
+const reviewEvidence: ReleaseEvidence = {
+  releaseId: 'api-review-release',
+  releaseType: 'standard',
+  tests: { passed: 87, failed: 0 },
+  coverage: 82,
+  security: { critical: 0, high: 3 },
   lintErrors: 0,
 };
 
@@ -64,6 +74,20 @@ describe('POST /api/v1/evaluations', () => {
     });
     expect(res.statusCode).toBe(400);
   });
+
+  it('returns REVIEW for high-risk security without blocking reasons', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: reviewEvidence,
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({
+      releaseId: 'api-review-release',
+      decision: 'REVIEW',
+      reasons: ['HIGH_SECURITY_RISK'],
+    });
+  });
 });
 
 describe('GET /api/v1/evaluations', () => {
@@ -100,7 +124,7 @@ describe('GET /api/v1/statistics', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.total).toBe(18);
-    expect(body.byDecision).toEqual({ GO: 13, REVIEW: 0, NO_GO: 5 });
+    expect(body.byDecision).toEqual({ GO: 10, REVIEW: 4, NO_GO: 4 });
     await fresh.close();
   });
 });

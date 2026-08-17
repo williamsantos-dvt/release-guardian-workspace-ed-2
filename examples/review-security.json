@@ -1,0 +1,8 @@
+{
+  "releaseId": "crm-sync-2.0.0",
+  "releaseType": "standard",
+  "tests": { "passed": 240, "failed": 0 },
+  "coverage": 82,
+  "security": { "critical": 0, "high": 2 },
+  "lintErrors": 0
+}

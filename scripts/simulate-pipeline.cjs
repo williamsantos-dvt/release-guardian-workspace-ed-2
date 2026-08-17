@@ -3,7 +3,7 @@
 // pipeline would: run "stages", assemble evidence, POST it, report the
 // outcome. Usage:
 //   npm run simulate:pipeline                  # healthy scenario
-//   npm run simulate:pipeline -- low-coverage  # any examples/*.json name
+//   npm run simulate:pipeline -- review-security  # any examples/*.json name
 const { readFileSync } = require('node:fs');
 const { resolve } = require('node:path');
 
