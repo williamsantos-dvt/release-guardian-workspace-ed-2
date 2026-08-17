@@ -33,10 +33,13 @@ da policy estão em `apps/api/src/constants.ts`.
 
 Na policy atual:
 
-- Cobertura mínima é 75%; abaixo disso a release é `NO_GO`.
+- Cobertura é avaliada por `releaseType`:
+  - `standard`: `<70` = `NO_GO`, `70-79.99` = `REVIEW`, `>=80` sem restrição.
+  - `hotfix`: `<65` = `NO_GO`, `65-79.99` = `REVIEW`, `>=80` sem restrição.
 - Vulnerabilidades `critical` geram `NO_GO`.
-- Vulnerabilidades `high` sem `critical` geram `REVIEW`.
-- Falhas de testes mandatórios e erros de lint geram `NO_GO`.
+- Vulnerabilidades `high` a partir de 3 (`>=3`) geram `REVIEW` quando não há bloqueio.
+- Falhas de testes mandatórios geram `NO_GO`.
+- Erros de lint geram `REVIEW` quando não há bloqueio.
 
 ### Dashboard (`apps/dashboard`)
 

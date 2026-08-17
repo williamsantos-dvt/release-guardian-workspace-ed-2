@@ -20,8 +20,23 @@ uma decisão com as razões aplicáveis.
 
 ### Cobertura
 
-- **Cobertura mínima: 75%.** Cobertura inferior a 75% bloqueia a release
-  (`COVERAGE_BELOW_MINIMUM`).
+- O Guardian aplica thresholds de cobertura por tipo de release (`COVERAGE_BELOW_MINIMUM`).
+
+**STANDARD**:
+
+| Cobertura | Decisão |
+|---|---|
+| `< 70` | `NO_GO` |
+| `70 – 79.99` | `REVIEW` |
+| `>= 80` | sem restrição de cobertura |
+
+**HOTFIX**:
+
+| Cobertura | Decisão |
+|---|---|
+| `< 65` | `NO_GO` |
+| `65 – 79.99` | `REVIEW` |
+| `>= 80` | sem restrição de cobertura |
 
 ### Testes
 
@@ -30,12 +45,12 @@ uma decisão com as razões aplicáveis.
 ### Segurança
 
 - Qualquer vulnerabilidade **critical** bloqueia a release (`CRITICAL_SECURITY_VULNERABILITY`).
-- Vulnerabilidades **high** sem findings critical exigem revisão pela equipa de
-  segurança (`HIGH_SECURITY_RISK`).
+- Vulnerabilidades **high** a partir de 3 (`>= 3`) exigem revisão pela equipa
+  de segurança (`HIGH_SECURITY_RISK`) quando não existe razão bloqueante.
 
 ### Lint
 
-- Erros de lint bloqueiam a release (`LINT_ERRORS`).
+- Erros de lint exigem revisão (`LINT_ERRORS`) quando não existe razão bloqueante.
 
 ## Ordem das razões
 
@@ -51,15 +66,17 @@ ordem:
 ## Composição da decisão
 
 - Se existir pelo menos uma razão bloqueante (`COVERAGE_BELOW_MINIMUM`,
-  `MANDATORY_TEST_FAILURE`, `CRITICAL_SECURITY_VULNERABILITY`, `LINT_ERRORS`),
+  `MANDATORY_TEST_FAILURE`, `CRITICAL_SECURITY_VULNERABILITY`),
   a decisão final é `NO_GO`.
-- Se não existir razão bloqueante, mas existir `HIGH_SECURITY_RISK`, a decisão
-  final é `REVIEW`.
+- Se não existir razão bloqueante, mas existir uma razão de revisão
+  (`COVERAGE_BELOW_MINIMUM` na faixa de review, `LINT_ERRORS`,
+  `HIGH_SECURITY_RISK`), a decisão final é `REVIEW`.
 - Sem razões, a decisão final é `GO`.
 
 ## Tipos de release
 
-A policy aplica-se de forma idêntica a releases `standard` e `hotfix`.
+A policy aplica-se com thresholds de cobertura diferentes para releases
+`standard` e `hotfix`; as restantes regras e precedência mantêm-se.
 
 ## Contrato da API
 
