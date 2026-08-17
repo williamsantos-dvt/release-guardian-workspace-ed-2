@@ -6,17 +6,18 @@
  * shape as frozen (see packages/contracts).
  */
 import { POLICY_VERSION, MINIMUM_COVERAGE } from '../constants.js';
+import type { Decision, ReleaseEvidence } from '@release-guardian/contracts';
 
 export interface DecisionResult {
-  decision: 'GO' | 'NO_GO';
+  decision: Decision;
   reasons: string[];
   policyVersion: string;
 }
 
-export function evaluateRelease(data: any): DecisionResult {
-  const reasons = [];
+export function evaluateRelease(data: ReleaseEvidence): DecisionResult {
+  const reasons: string[] = [];
 
-  if (data.coverage < 70) {
+  if (data.coverage < MINIMUM_COVERAGE) {
     reasons.push('COVERAGE_BELOW_MINIMUM');
   }
 
@@ -32,19 +33,15 @@ export function evaluateRelease(data: any): DecisionResult {
     reasons.push('LINT_ERRORS');
   }
 
-  // decide final outcome from collected reasons
-  let decision: 'GO' | 'NO_GO' = 'GO';
-  if (reasons.includes('COVERAGE_BELOW_MINIMUM')) {
+  const hasBlockingReasons = reasons.length > 0;
+
+  let decision: Decision;
+  if (hasBlockingReasons) {
     decision = 'NO_GO';
-  }
-  if (reasons.includes('MANDATORY_TEST_FAILURE')) {
-    decision = 'NO_GO';
-  }
-  if (reasons.includes('CRITICAL_SECURITY_VULNERABILITY')) {
-    decision = 'NO_GO';
-  }
-  if (reasons.includes('LINT_ERRORS')) {
-    decision = 'NO_GO';
+  } else if (data.security.high > 0) {
+    decision = 'REVIEW';
+  } else {
+    decision = 'GO';
   }
 
   const result = {

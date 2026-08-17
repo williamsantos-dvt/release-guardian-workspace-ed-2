@@ -1,45 +1,51 @@
-# Release Policy — Referência Funcional
+# Release Policy - Referencia Funcional
 
-> Documentação de referência da release policy do Release Guardian.
-> Última revisão conhecida: atualização maior da policy (ver changelog interno).
+> Referencia funcional da release policy do Release Guardian.
+> Esta versao esta alinhada com `docs/release-policy-review.md`.
 
-## Visão geral
+## Visao geral
 
-O Guardian avalia cada submissão de evidência contra a policy em vigor e devolve
-uma decisão com as razões aplicáveis.
+O Guardian avalia cada submissao de evidencia contra a policy em vigor e devolve
+uma decisao auditavel com as razoes aplicaveis.
 
-## Decisões possíveis
+## Decisoes possiveis
 
-| Decisão | Significado |
+| Decisao | Significado |
 |---|---|
-| `GO` | Release aprovada para deployment |
+| `GO` | Release aprovada para deployment automatico |
+| `REVIEW` | Release requer aprovacao manual antes do deployment |
 | `NO_GO` | Release bloqueada |
 
 ## Regras em vigor
 
 ### Cobertura
 
-- **Cobertura mínima: 75%.** Cobertura inferior a 75% bloqueia a release
+- **Cobertura minima: 70%.** Cobertura inferior a 70% bloqueia a release
   (`COVERAGE_BELOW_MINIMUM`).
 
 ### Testes
 
-- Qualquer teste mandatório falhado bloqueia a release (`MANDATORY_TEST_FAILURE`).
+- Qualquer teste mandatorio falhado bloqueia a release (`MANDATORY_TEST_FAILURE`).
 
-### Segurança
+### Seguranca
 
 - Qualquer vulnerabilidade **critical** bloqueia a release (`CRITICAL_SECURITY_VULNERABILITY`).
-- **Qualquer vulnerabilidade high** exige revisão pela equipa de segurança antes
-  do deployment (`HIGH_SECURITY_RISK`).
+- Vulnerabilidades **high** sem bloqueios de cobertura, testes, critical ou lint
+  resultam em `REVIEW`.
 
 ### Lint
 
 - Erros de lint bloqueiam a release (`LINT_ERRORS`).
 
-## Ordem das razões
+## Prioridade de decisao
 
-Quando várias regras se aplicam, todas as razões são devolvidas pela seguinte
-ordem:
+1. Regras de bloqueio (`NO_GO`) tem prioridade maxima.
+2. `REVIEW` so e emitido quando nao existe qualquer bloqueio.
+3. `GO` so e emitido quando nao existe bloqueio nem condicao de review.
+
+## Ordem das razoes
+
+Quando varias regras de bloqueio se aplicam, as razoes sao devolvidas na ordem:
 
 1. `COVERAGE_BELOW_MINIMUM`
 2. `MANDATORY_TEST_FAILURE`
@@ -48,10 +54,10 @@ ordem:
 
 ## Tipos de release
 
-A policy aplica-se de forma idêntica a releases `standard` e `hotfix`.
+A policy aplica-se de forma identica a releases `standard` e `hotfix`.
 
 ## Contrato da API
 
-O contrato de `POST /api/v1/evaluations` está congelado: pipelines em produção
-dependem dele. Evoluções da policy não podem alterar o pedido nem a forma da
+O contrato de `POST /api/v1/evaluations` esta congelado: pipelines em producao
+dependem dele. Evolucoes da policy nao podem alterar o pedido nem a forma da
 resposta.

@@ -64,6 +64,22 @@ describe('POST /api/v1/evaluations', () => {
     });
     expect(res.statusCode).toBe(400);
   });
+
+  it('returns REVIEW for high vulnerabilities without blockers', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: {
+        ...healthyEvidence,
+        releaseId: 'api-test-review',
+        security: { critical: 0, high: 2 },
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.decision).toBe('REVIEW');
+    expect(body.reasons).toEqual([]);
+  });
 });
 
 describe('GET /api/v1/evaluations', () => {
@@ -100,7 +116,7 @@ describe('GET /api/v1/statistics', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.total).toBe(18);
-    expect(body.byDecision).toEqual({ GO: 13, REVIEW: 0, NO_GO: 5 });
+    expect(body.byDecision).toEqual({ GO: 8, REVIEW: 5, NO_GO: 5 });
     await fresh.close();
   });
 });

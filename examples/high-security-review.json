@@ -1,0 +1,8 @@
+{
+  "releaseId": "search-svc-1.9.4",
+  "releaseType": "standard",
+  "tests": { "passed": 150, "failed": 0 },
+  "coverage": 79,
+  "security": { "critical": 0, "high": 2 },
+  "lintErrors": 0
+}

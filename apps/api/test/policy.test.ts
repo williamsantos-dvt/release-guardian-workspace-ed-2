@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { evaluateRelease } from '../src/services/releaseService.js';
+import type { ReleaseEvidence } from '@release-guardian/contracts';
 
-const healthy = {
+const healthy: ReleaseEvidence = {
   releaseId: 'test-release',
   releaseType: 'standard',
   tests: { passed: 100, failed: 0 },
@@ -10,7 +11,7 @@ const healthy = {
   lintErrors: 0,
 };
 
-describe('release policy (baseline)', () => {
+describe('release policy', () => {
   it('approves a healthy release', () => {
     const result = evaluateRelease(healthy);
     expect(result.decision).toBe('GO');
@@ -20,6 +21,22 @@ describe('release policy (baseline)', () => {
   it('approves coverage of 72', () => {
     const result = evaluateRelease({ ...healthy, coverage: 72 });
     expect(result.decision).toBe('GO');
+  });
+
+  it('marks high vulnerabilities as REVIEW when there are no blockers', () => {
+    const result = evaluateRelease({ ...healthy, security: { critical: 0, high: 2 } });
+    expect(result.decision).toBe('REVIEW');
+    expect(result.reasons).toEqual([]);
+  });
+
+  it('keeps NO_GO priority when high vulnerabilities also exist with blockers', () => {
+    const result = evaluateRelease({
+      ...healthy,
+      coverage: 60,
+      security: { critical: 0, high: 3 },
+    });
+    expect(result.decision).toBe('NO_GO');
+    expect(result.reasons).toContain('COVERAGE_BELOW_MINIMUM');
   });
 
   it('blocks coverage below the minimum', () => {
