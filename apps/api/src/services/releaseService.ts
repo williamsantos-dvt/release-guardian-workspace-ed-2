@@ -5,18 +5,20 @@
  * The decision contract is consumed by CI pipelines — treat the response
  * shape as frozen (see packages/contracts).
  */
-import { POLICY_VERSION, MINIMUM_COVERAGE } from '../constants.js';
+import type { Decision, ReleaseEvidence } from '@release-guardian/contracts';
+import { POLICY_VERSION, MINIMUM_COVERAGE, COVERAGE_THRESHOLDS } from '../constants.js';
 
 export interface DecisionResult {
-  decision: 'GO' | 'NO_GO';
+  decision: Decision;
   reasons: string[];
   policyVersion: string;
 }
 
-export function evaluateRelease(data: any): DecisionResult {
-  const reasons = [];
+export function evaluateRelease(data: ReleaseEvidence): DecisionResult {
+  const reasons: string[] = [];
+  const thresholds = COVERAGE_THRESHOLDS[data.releaseType] ?? COVERAGE_THRESHOLDS.standard;
 
-  if (data.coverage < 70) {
+  if (data.coverage < thresholds.noGoBelow) {
     reasons.push('COVERAGE_BELOW_MINIMUM');
   }
 
@@ -32,11 +34,14 @@ export function evaluateRelease(data: any): DecisionResult {
     reasons.push('LINT_ERRORS');
   }
 
-  // decide final outcome from collected reasons
-  let decision: 'GO' | 'NO_GO' = 'GO';
-  if (reasons.includes('COVERAGE_BELOW_MINIMUM')) {
+  // decide final outcome from coverage band, then apply blockers
+  let decision: Decision = 'GO';
+  if (data.coverage < thresholds.noGoBelow) {
     decision = 'NO_GO';
+  } else if (data.coverage < thresholds.goFrom) {
+    decision = 'REVIEW';
   }
+
   if (reasons.includes('MANDATORY_TEST_FAILURE')) {
     decision = 'NO_GO';
   }
@@ -48,8 +53,8 @@ export function evaluateRelease(data: any): DecisionResult {
   }
 
   const result = {
-    decision: decision,
-    reasons: reasons,
+    decision,
+    reasons,
     policyVersion: POLICY_VERSION,
   };
 

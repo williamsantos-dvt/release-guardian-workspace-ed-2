@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
+import type { ReleaseEvidence } from '@release-guardian/contracts';
 import { evaluateRelease } from '../src/services/releaseService.js';
 
-const healthy = {
+const healthy: ReleaseEvidence = {
   releaseId: 'test-release',
   releaseType: 'standard',
   tests: { passed: 100, failed: 0 },
@@ -17,9 +18,38 @@ describe('release policy (baseline)', () => {
     expect(result.reasons).toEqual([]);
   });
 
-  it('approves coverage of 72', () => {
+  it('approves standard coverage of 72', () => {
     const result = evaluateRelease({ ...healthy, coverage: 72 });
     expect(result.decision).toBe('GO');
+  });
+
+  it('keeps standard coverage of 67 as NO_GO', () => {
+    const result = evaluateRelease({ ...healthy, coverage: 67 });
+    expect(result.decision).toBe('NO_GO');
+  });
+
+  it('returns NO_GO for hotfix coverage below 65', () => {
+    const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 64.9 });
+    expect(result.decision).toBe('NO_GO');
+    expect(result.reasons).toContain('COVERAGE_BELOW_MINIMUM');
+  });
+
+  it('returns REVIEW for hotfix coverage at 65', () => {
+    const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 65 });
+    expect(result.decision).toBe('REVIEW');
+    expect(result.reasons).not.toContain('COVERAGE_BELOW_MINIMUM');
+  });
+
+  it('returns REVIEW for hotfix coverage of 79.99', () => {
+    const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 79.99 });
+    expect(result.decision).toBe('REVIEW');
+    expect(result.reasons).toEqual([]);
+  });
+
+  it('returns GO for hotfix coverage at 80', () => {
+    const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 80 });
+    expect(result.decision).toBe('GO');
+    expect(result.reasons).toEqual([]);
   });
 
   it('blocks coverage below the minimum', () => {
@@ -41,7 +71,7 @@ describe('release policy (baseline)', () => {
   });
 
   it('blocks lint errors', () => {
-    const result = evaluateRelease({ ...healthy, lintErrors: 5 });
+    const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 67, lintErrors: 5 });
     expect(result.decision).toBe('NO_GO');
     expect(result.reasons).toContain('LINT_ERRORS');
   });

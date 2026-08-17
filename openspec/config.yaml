@@ -1,32 +1,51 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Projeto: Release Guardian — serviço interno de release readiness.
+  Pipelines CI/CD submetem evidência de qualidade (testes, cobertura, segurança,
+  lint) via POST /api/v1/evaluations; o serviço aplica a release policy em vigor
+  e devolve uma decisão auditável (GO | REVIEW | NO_GO) com as razões aplicáveis.
+  O Guardian nunca produz evidência — apenas avalia a que recebe.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Stack: TypeScript ESM, Node >= 20, Fastify (API), React/Vite (dashboard,
+  observação apenas), vitest, npm workspaces (apps/*, packages/*).
+  Imports relativos usam sufixo .js mesmo em ficheiros .ts.
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+  Arquitetura: routes/index.ts (HTTP + JSON Schema) -> services/releaseService.ts
+  (motor de decisão) -> repository/evaluationRepository.ts (histórico em memória,
+  reavalia a seed de 18 avaliações a cada arranque).
+  Limiares em apps/api/src/constants.ts. Contrato partilhado (tipos, JSON Schemas,
+  REASON_CODES) em packages/contracts/src/index.ts.
+
+  Congelado: request e resposta de POST /api/v1/evaluations; Decision =
+  GO | REVIEW | NO_GO; formato de id EV-\d{4}. Sem novas dependências,
+  persistência externa, base de dados ou Docker. Dashboard e simulador de
+  pipeline são instrumentos de observação, não área de implementação.
+
+  Sistema legado com divergências reais entre implementação, testes e
+  documentação. Hierarquia de confiança: packages/contracts > comportamento
+  observado em runtime > testes existentes > docs/*.md.
+  Contexto curado: AGENTS.md (mapa, invariantes, definição de done) e
+  docs/baseline-findings.md (divergências registadas, D-01..D-14).
+  Divergências não se resolvem por iniciativa própria — reportar e perguntar.
+
+  Validação: npm run validate (typecheck -> lint -> testes -> coverage -> smoke
+  funcional). Demo funcional: npm run simulate:pipeline -- <cenário>.
+  Prosa em português; código e identificadores em inglês.
+
+rules:
+  proposal:
+    - Declarar explicitamente se a mudança toca no contrato congelado de POST /api/v1/evaluations (o esperado é "não").
+    - Identificar que divergência de docs/baseline-findings.md a mudança resolve e quais deixa intactas.
+    - Incluir uma secção de não-objetivos.
+  spec:
+    - Cada requisito tem de ser verificável por um cenário no formato evidência -> (decisão, reasons esperadas), incluindo casos-fronteira (abaixo, igual, acima do limiar).
+    - Nomear os reason codes exatos e a sua posição na ordem canónica de REASON_CODES.
+    - Declarar o impacto nas contagens agregadas da seed (byDecision) quando limiares mudam.
+  design:
+    - Justificar onde a decisão passa a ser derivada e porque é que o contrato se mantém intacto.
+    - Listar os pontos que têm de concordar entre si: constants.ts, releaseService.ts, GET /api/v1/policy, REASON_CODES, testes, docs/release-policy.md, POLICY_VERSION.
+  tasks:
+    - Tarefas delimitadas a ficheiros concretos, sem refactors oportunistas.
+    - Alterar um teste existente exige uma tarefa própria com a justificação escrita.
+    - A última tarefa é sempre validação independente (npm run validate + simulador) com output colado.

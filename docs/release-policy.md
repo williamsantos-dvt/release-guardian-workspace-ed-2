@@ -13,14 +13,22 @@ uma decisão com as razões aplicáveis.
 | Decisão | Significado |
 |---|---|
 | `GO` | Release aprovada para deployment |
+| `REVIEW` | Release exige aprovação manual antes do deployment |
 | `NO_GO` | Release bloqueada |
 
 ## Regras em vigor
 
 ### Cobertura
 
-- **Cobertura mínima: 75%.** Cobertura inferior a 75% bloqueia a release
-  (`COVERAGE_BELOW_MINIMUM`).
+- A policy usa limiares por tipo de release:
+
+| Tipo | Cobertura | Decisão base |
+|---|---|---|
+| `standard` | `< 70` | `NO_GO` |
+| `standard` | `>= 70` | sem restrição por cobertura |
+| `hotfix` | `< 65` | `NO_GO` |
+| `hotfix` | `65 – 79.99` | `REVIEW` |
+| `hotfix` | `>= 80` | sem restrição por cobertura |
 
 ### Testes
 
@@ -29,12 +37,16 @@ uma decisão com as razões aplicáveis.
 ### Segurança
 
 - Qualquer vulnerabilidade **critical** bloqueia a release (`CRITICAL_SECURITY_VULNERABILITY`).
-- **Qualquer vulnerabilidade high** exige revisão pela equipa de segurança antes
-  do deployment (`HIGH_SECURITY_RISK`).
 
 ### Lint
 
 - Erros de lint bloqueiam a release (`LINT_ERRORS`).
+
+### Precedência
+
+- A decisão final aplica precedência: `NO_GO > REVIEW > GO`.
+- Sinais bloqueantes (testes falhados, critical, lint) prevalecem sobre decisão
+  base derivada da cobertura.
 
 ## Ordem das razões
 
@@ -48,7 +60,12 @@ ordem:
 
 ## Tipos de release
 
-A policy aplica-se de forma idêntica a releases `standard` e `hotfix`.
+A policy diferencia releases `standard` e `hotfix` apenas nos limiares de cobertura.
+
+## Cenário canónico de hotfix
+
+- `hotfix-release` (coverage 67, restantes sinais saudáveis) resulta em `REVIEW`.
+- Uma release `standard` com coverage 67 continua `NO_GO`.
 
 ## Contrato da API
 

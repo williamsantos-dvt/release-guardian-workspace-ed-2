@@ -8,7 +8,7 @@
   "default_agent": "plan",
   "enabled_providers": [
     "azure-cognitive-services"
-  ],     
+  ],
   "agent": {
     "plan": {
       "model": "azure-cognitive-services/gpt-5.1",
@@ -19,21 +19,21 @@
     },
     "build": {
       "model": "azure-cognitive-services/gpt-5.3-codex",
-      "options": { "maxTokens": 128000, "reasoningEffort": "high", "textVerbosity": "medium" },      
+      "options": { "maxTokens": 128000, "reasoningEffort": "high", "textVerbosity": "medium" },
       "permission": {
         "skill": {}
       }
     },
     "general": {
       "model": "azure-cognitive-services/gpt-5.1-codex-mini",
-      "options": { "maxTokens": 128000, "reasoningEffort": "high", "textVerbosity": "medium" },      
+      "options": { "maxTokens": 128000, "reasoningEffort": "high", "textVerbosity": "medium" },
       "permission": {
         "skill": {}
       }
     },
     "explore": {
       "model": "azure-cognitive-services/gpt-5-mini",
-      "options": { "maxTokens": 128000, "reasoningEffort": "high", "textVerbosity": "medium" }, 
+      "options": { "maxTokens": 128000, "reasoningEffort": "high", "textVerbosity": "medium" },
       "permission": {
         "skill": {}
       }
@@ -44,14 +44,14 @@
       "name": "Azure Cognitive Services (xTEAM)",
       "options": {
         "apiKey": "{file:./azure.token}",
-        "resourceName": "dvtpt-ct-xteam-cpt-xxx-fndy"
+        "resourceName": "dvtpt-ct-xteam-cpt-python-fndy"
       },
       "whitelist": [
         "gpt-5-mini",
         "gpt-5.1",
         "gpt-5.1-codex-mini",
         "gpt-5.3-codex"
-      ],       
+      ],
       "models": {
         // xTEAM Azure OpenAI Models
         "gpt-5.3-codex": {
@@ -69,18 +69,18 @@
         "gpt-5.1-codex-mini": {
           "name": "GPT-5.1 Codex Mini (xTEAM)",
           "options": { "maxTokens": 128000, "reasoningEffort": "high", "textVerbosity": "medium" },
-          "variants": { "medium": { "reasoningEffort": "medium" }, "high": { "reasoningEffort": "high" } },          
+          "variants": { "medium": { "reasoningEffort": "medium" }, "high": { "reasoningEffort": "high" } },
           "limit": { "context": 400000, "output": 128000 }
         },
         "gpt-5-mini": {
           "name": "GPT-5 Mini (xTEAM)",
           "options": { "maxTokens": 128000, "reasoningEffort": "high", "textVerbosity": "medium" },
-          "variants": { "medium": { "reasoningEffort": "medium" }, "high": { "reasoningEffort": "high" } },          
+          "variants": { "medium": { "reasoningEffort": "medium" }, "high": { "reasoningEffort": "high" } },
           "limit": { "context": 400000, "output": 128000 }
-        }      
+        }
       }
     }
-  },   
+  },
   "mcp": {
     "atlassian": {
       "type": "remote",
@@ -89,3 +89,4 @@
     }
   }
 }
+

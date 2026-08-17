@@ -34,8 +34,8 @@ describe('GET /api/v1/policy', () => {
     const res = await app.inject({ method: 'GET', url: '/api/v1/policy' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({
-      policyVersion: '1.2.0',
-      minimumCoverage: 70,
+      policyVersion: '1.3.0',
+      minimumCoverage: 65,
       supportedReleaseTypes: ['standard', 'hotfix'],
     });
   });
@@ -63,6 +63,23 @@ describe('POST /api/v1/evaluations', () => {
       payload: { releaseId: 'broken' },
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  it('returns REVIEW for hotfix coverage in review band', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: {
+        releaseId: 'hotfix-review-case',
+        releaseType: 'hotfix',
+        tests: { passed: 120, failed: 0 },
+        coverage: 67,
+        security: { critical: 0, high: 0 },
+        lintErrors: 0,
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({ decision: 'REVIEW' });
   });
 });
 
@@ -100,7 +117,7 @@ describe('GET /api/v1/statistics', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.total).toBe(18);
-    expect(body.byDecision).toEqual({ GO: 13, REVIEW: 0, NO_GO: 5 });
+    expect(body.byDecision).toEqual({ GO: 13, REVIEW: 1, NO_GO: 4 });
     await fresh.close();
   });
 });
