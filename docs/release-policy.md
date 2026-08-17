@@ -18,10 +18,23 @@ uma decisao auditavel com as razoes aplicaveis.
 
 ## Regras em vigor
 
-### Cobertura
+### Cobertura por tipo de release
 
-- **Cobertura minima: 70%.** Cobertura inferior a 70% bloqueia a release
-  (`COVERAGE_BELOW_MINIMUM`).
+**STANDARD**
+
+| Cobertura | Decisao |
+|---|---|
+| `< 70` | `NO_GO` (`COVERAGE_BELOW_MINIMUM`) |
+| `70 - 79.99` | `REVIEW` |
+| `>= 80` | sem restricao de cobertura |
+
+**HOTFIX**
+
+| Cobertura | Decisao |
+|---|---|
+| `< 65` | `NO_GO` (`COVERAGE_BELOW_MINIMUM`) |
+| `65 - 79.99` | `REVIEW` |
+| `>= 80` | sem restricao de cobertura |
 
 ### Testes
 
@@ -30,12 +43,12 @@ uma decisao auditavel com as razoes aplicaveis.
 ### Seguranca
 
 - Qualquer vulnerabilidade **critical** bloqueia a release (`CRITICAL_SECURITY_VULNERABILITY`).
-- Vulnerabilidades **high** sem bloqueios de cobertura, testes, critical ou lint
-  resultam em `REVIEW`.
+- Vulnerabilidades **high** (`>= 3`) sem bloqueios resultam em `REVIEW`.
 
 ### Lint
 
-- Erros de lint bloqueiam a release (`LINT_ERRORS`).
+- Erros de lint (`> 0`) resultam em `REVIEW` (`LINT_ERRORS`) quando nao existe
+  condicao de bloqueio.
 
 ## Prioridade de decisao
 
@@ -54,7 +67,8 @@ Quando varias regras de bloqueio se aplicam, as razoes sao devolvidas na ordem:
 
 ## Tipos de release
 
-A policy aplica-se de forma identica a releases `standard` e `hotfix`.
+A policy diferencia `standard` e `hotfix` nos thresholds de cobertura, mantendo
+as restantes regras de testes, seguranca e lint.
 
 ## Contrato da API
 

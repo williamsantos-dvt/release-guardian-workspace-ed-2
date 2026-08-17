@@ -1,127 +1,62 @@
-# Release Guardian - Introducao do veredito REVIEW
+# Release Policy Review - estado atual
 
 ## 1) Contexto
 
-O Release Guardian recebe evidencias de qualidade de pipelines CI/CD via `POST /api/v1/evaluations` e devolve uma decisao de readiness para deployment.
+Este documento resume o estado da policy apos duas iteracoes:
 
-No estado atual:
+1. introducao do veredito `REVIEW`;
+2. aplicacao do change request `CR-01` para thresholds de cobertura por tipo de release.
 
-- O contrato publico ja suporta `GO | REVIEW | NO_GO`.
-- O simulador e o dashboard ja sabem mostrar `REVIEW`.
-- O motor de policy ainda emite apenas `GO` ou `NO_GO`.
+Referencia do CR-01: `docs/change-requests/cr-01-hotfix-policy.md`.
 
-Este documento define o baseline atual, a policy alvo com `REVIEW` e como a mudanca deve ser organizada e verificada.
+## 2) Decisoes e precedencia
 
-## 2) Baseline atual (fonte: codigo + testes)
+O motor devolve uma de tres decisoes:
 
-### 2.1 Regras atuais do motor
+- `NO_GO`
+- `REVIEW`
+- `GO`
 
-Regra de bloqueio (`NO_GO`) quando existir qualquer um dos pontos abaixo:
+Precedencia obrigatoria:
 
-- `coverage < 70` -> `COVERAGE_BELOW_MINIMUM`
+1. `NO_GO`
+2. `REVIEW`
+3. `GO`
+
+## 3) Regras de bloqueio (`NO_GO`)
+
+- Cobertura abaixo do minimo por tipo:
+  - `standard`: `< 70` -> `COVERAGE_BELOW_MINIMUM`
+  - `hotfix`: `< 65` -> `COVERAGE_BELOW_MINIMUM`
 - `tests.failed > 0` -> `MANDATORY_TEST_FAILURE`
 - `security.critical > 0` -> `CRITICAL_SECURITY_VULNERABILITY`
-- `lintErrors > 0` -> `LINT_ERRORS`
 
-Sem motivos, a decisao e `GO`.
+## 4) Regras de revisao (`REVIEW`) quando nao ha bloqueio
 
-### 2.2 Observacoes de baseline
+- Cobertura em faixa de revisao:
+  - `standard`: `70 - 79.99`
+  - `hotfix`: `65 - 79.99`
+- `security.high >= 3`
+- `lintErrors > 0` (com `LINT_ERRORS`)
 
-- `security.high` nao influencia a decisao no baseline atual.
-- `releaseType` (`standard` ou `hotfix`) nao altera a policy.
-- O historico seed e reavaliado em cada arranque com a policy corrente.
-- Distribuicao atual nos testes de API: `GO=13`, `REVIEW=0`, `NO_GO=5`.
+## 5) Razoes e ordem
 
-### 2.3 Fronteira HTTP
-
-Payloads invalidos sao rejeitados na validacao JSON Schema com `400 Bad Request`.
-Exemplo: `coverage: null` em `incomplete-evidence`.
-
-## 3) Policy alvo com REVIEW
-
-Decisoes desejadas:
-
-- `GO`: sem problemas relevantes.
-- `REVIEW`: requer aprovacao manual antes do deployment.
-- `NO_GO`: bloqueia deployment automatico.
-
-### 3.1 Regras funcionais propostas
-
-1. Se qualquer condicao de bloqueio ocorrer (`coverage < 70`, falha de testes, `critical > 0`, lint), a decisao e `NO_GO`.
-2. Se nao houver bloqueios e `security.high > 0`, a decisao e `REVIEW`.
-3. Se nao houver bloqueios nem high risk, a decisao e `GO`.
-
-### 3.2 Prioridade
-
-- `NO_GO` tem prioridade sobre `REVIEW`.
-- `REVIEW` so pode ocorrer sem blockers.
-
-### 3.3 Ordem de reasons
-
-Quando houver multiplos blockers, manter ordem estavel:
+As razoes continuam na ordem canonica quando aplicaveis:
 
 1. `COVERAGE_BELOW_MINIMUM`
 2. `MANDATORY_TEST_FAILURE`
 3. `CRITICAL_SECURITY_VULNERABILITY`
 4. `LINT_ERRORS`
 
-## 4) OpenSpec: estrutura canonica da mudanca
+## 6) Contrato e restricoes
 
-Change sugerida: `openspec/changes/introduzir-review-verdict/`
+- O contrato HTTP de `POST /api/v1/evaluations` permanece congelado.
+- Sem novos endpoints.
+- Sem persistencia externa.
+- Dashboard e simulador continuam apenas como consumidores da API.
 
-Ordem dos artefactos:
+## 7) Cenarios de referencia
 
-1. `proposal.md`
-   - Intencao, motivacao e escopo.
-2. `specs/release-policy/spec.md`
-   - Requisitos verificaveis (GO/REVIEW/NO_GO com condicoes explicitas).
-3. `design.md`
-   - Decisoes tecnicas e pontos de alteracao.
-4. `tasks.md`
-   - Tarefas pequenas e delegaveis.
-
-Cada requisito da spec deve mapear para pelo menos um teste/verificacao.
-
-## 5) Harness (AGENTS) - o que incluir
-
-### 5.1 Incluir
-
-- Comandos de validacao: `npm test`, `npm run validate`, `npm run simulate:pipeline -- <cenario>`.
-- Restricoes do briefing:
-  - sem persistencia externa
-  - sem dependencias novas sem justificacao forte
-  - dashboard/simulador sao observacao, nao local de policy
-  - manter contrato HTTP estavel
-- Ponteiros para ficheiros relevantes (nao colar codigo):
-  - `apps/api/src/services/releaseService.ts`
-  - `apps/api/src/constants.ts`
-  - `packages/contracts/src/index.ts`
-  - `apps/api/src/repository/evaluationRepository.ts`
-  - `apps/api/src/seeds/seedData.ts`
-  - `apps/api/test/policy.test.ts`
-  - `apps/api/test/api.test.ts`
-  - `examples/*.json`
-- Estado da baseline e decisoes tomadas.
-- Referencia explicita a change OpenSpec como fonte de verdade.
-
-### 5.2 Nao incluir
-
-- Dumps de codigo fonte completo.
-- Listas longas de ficheiros irrelevantes.
-- Instrucoes vagas sem criterios verificaveis.
-
-## 6) Definicao de done para esta mudanca
-
-Uma implementacao da change so esta concluida quando:
-
-1. `evaluateRelease` emite `GO | REVIEW | NO_GO` conforme a spec.
-2. Testes de policy e API cobrem casos de `REVIEW` e prioridade de `NO_GO`.
-3. Estatisticas (`/api/v1/statistics`) refletem contagens atualizadas de `REVIEW`.
-4. Documentacao de policy esta alinhada com o comportamento implementado.
-5. `npm run validate` passa.
-
-## 7) Anti-padroes a evitar
-
-- Assumir que "testes verdes" significa "policy correta" sem verificar intencao de negocio.
-- Declarar que "tudo esta obsoleto" sem evidencias.
-- Implementar `REVIEW` sem requisitos mensuraveis.
+- `npm run simulate:pipeline -- hotfix-release`
+  - Hotfix com cobertura 67 e restantes sinais saudaveis -> `REVIEW`.
+- Standard com a mesma cobertura (67) -> `NO_GO`.

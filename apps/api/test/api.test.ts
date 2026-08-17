@@ -65,20 +65,54 @@ describe('POST /api/v1/evaluations', () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it('returns REVIEW for high vulnerabilities without blockers', async () => {
+  it('returns REVIEW for high vulnerabilities (>=3) without blockers', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/v1/evaluations',
       payload: {
         ...healthyEvidence,
         releaseId: 'api-test-review',
-        security: { critical: 0, high: 2 },
+        security: { critical: 0, high: 3 },
       },
     });
     expect(res.statusCode).toBe(201);
     const body = res.json();
     expect(body.decision).toBe('REVIEW');
     expect(body.reasons).toEqual([]);
+  });
+
+  it('returns REVIEW for hotfix in coverage review range', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: {
+        ...healthyEvidence,
+        releaseId: 'api-test-hotfix-review',
+        releaseType: 'hotfix',
+        coverage: 67,
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.decision).toBe('REVIEW');
+    expect(body.reasons).toEqual([]);
+  });
+
+  it('returns NO_GO for standard with coverage 67', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/evaluations',
+      payload: {
+        ...healthyEvidence,
+        releaseId: 'api-test-standard-no-go',
+        releaseType: 'standard',
+        coverage: 67,
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.decision).toBe('NO_GO');
+    expect(body.reasons).toContain('COVERAGE_BELOW_MINIMUM');
   });
 });
 
@@ -116,7 +150,7 @@ describe('GET /api/v1/statistics', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.total).toBe(18);
-    expect(body.byDecision).toEqual({ GO: 8, REVIEW: 5, NO_GO: 5 });
+    expect(body.byDecision).toEqual({ GO: 10, REVIEW: 4, NO_GO: 4 });
     await fresh.close();
   });
 });
