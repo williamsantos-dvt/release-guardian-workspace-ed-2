@@ -20,9 +20,12 @@ export interface DecisionResult {
 
 export function evaluateRelease(data: ReleaseEvidence): DecisionResult {
   const reasons: ReasonCode[] = [];
-  const coverageBelowMinimum = data.coverage < MINIMUM_COVERAGE;
+  const coverageBelowStandardMinimum = data.coverage < MINIMUM_COVERAGE;
+  const coverageBelowHotfixMinimum = data.coverage < 65;
   const coverageNeedsAttention = data.coverage < COVERAGE_REVIEW_THRESHOLD;
-  const coverageIsBorderline = data.coverage >= MINIMUM_COVERAGE && coverageNeedsAttention;
+  const coverageIsBorderlineForStandard =
+    data.coverage >= MINIMUM_COVERAGE && coverageNeedsAttention;
+  const coverageIsBorderlineForHotfix = data.coverage >= 65 && coverageNeedsAttention;
   const isHotfixRelease = data.releaseType === 'hotfix';
   const hasTestFailure = data.tests.failed > 0;
   const hasCriticalVulnerability = data.security.critical > 0;
@@ -45,9 +48,13 @@ export function evaluateRelease(data: ReleaseEvidence): DecisionResult {
   }
 
   let decision: Decision = 'GO';
+  const coverageBelowMinimum = isHotfixRelease ? coverageBelowHotfixMinimum : coverageBelowStandardMinimum;
+
   if (coverageBelowMinimum || hasTestFailure || hasCriticalVulnerability || hasLintErrors) {
     decision = 'NO_GO';
-  } else if (coverageIsBorderline && !isHotfixRelease) {
+  } else if (!isHotfixRelease && coverageIsBorderlineForStandard) {
+    decision = 'REVIEW';
+  } else if (isHotfixRelease && coverageIsBorderlineForHotfix) {
     decision = 'REVIEW';
   }
 

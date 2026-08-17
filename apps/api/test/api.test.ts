@@ -69,7 +69,7 @@ describe('POST /api/v1/evaluations', () => {
     expect(body.reasons).toEqual(['COVERAGE_BELOW_MINIMUM']);
   });
 
-  it('keeps hotfixes in the 70-79 coverage band as GO with a coverage reason', async () => {
+  it('keeps hotfixes in the 65-79.99 coverage band as REVIEW with a coverage reason', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/v1/evaluations',
@@ -83,7 +83,7 @@ describe('POST /api/v1/evaluations', () => {
 
     expect(res.statusCode).toBe(201);
     const body = res.json();
-    expect(body.decision).toBe('GO');
+    expect(body.decision).toBe('REVIEW');
     expect(body.reasons).toEqual(['COVERAGE_BELOW_MINIMUM']);
   });
 
@@ -131,7 +131,7 @@ describe('GET /api/v1/statistics', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.total).toBe(18);
-    expect(body.byDecision).toEqual({ GO: 10, REVIEW: 3, NO_GO: 5 });
+    expect(body.byDecision).toEqual({ GO: 10, REVIEW: 4, NO_GO: 4 });
     await fresh.close();
   });
 });

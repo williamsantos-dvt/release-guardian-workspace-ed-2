@@ -24,9 +24,9 @@ describe('release policy (v2 tiered coverage)', () => {
     expect(result.reasons).toEqual(['COVERAGE_BELOW_MINIMUM']);
   });
 
-  it('approves a hotfix in the 70-79 band with a non-blocking coverage reason', () => {
+  it('sends a hotfix in the 65-79.99 band to REVIEW', () => {
     const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 72 });
-    expect(result.decision).toBe('GO');
+    expect(result.decision).toBe('REVIEW');
     expect(result.reasons).toEqual(['COVERAGE_BELOW_MINIMUM']);
   });
 
@@ -36,13 +36,13 @@ describe('release policy (v2 tiered coverage)', () => {
     expect(result.reasons).toEqual([]);
   });
 
-  it('blocks coverage below the minimum', () => {
+  it('blocks coverage below the minimum for standard releases', () => {
     const result = evaluateRelease({ ...healthy, coverage: 63 });
     expect(result.decision).toBe('NO_GO');
     expect(result.reasons).toContain('COVERAGE_BELOW_MINIMUM');
   });
 
-  it('blocks hotfix releases below the minimum coverage', () => {
+  it('blocks hotfix releases below the hotfix minimum coverage', () => {
     const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 63 });
     expect(result.decision).toBe('NO_GO');
     expect(result.reasons).toContain('COVERAGE_BELOW_MINIMUM');
@@ -91,5 +91,17 @@ describe('release policy (v2 tiered coverage)', () => {
       'CRITICAL_SECURITY_VULNERABILITY',
       'LINT_ERRORS',
     ]);
+  });
+
+  it('assesses a hotfix release with 67% coverage as REVIEW when signals are healthy', () => {
+    const result = evaluateRelease({ ...healthy, releaseType: 'hotfix', coverage: 67 });
+    expect(result.decision).toBe('REVIEW');
+    expect(result.reasons).toEqual(['COVERAGE_BELOW_MINIMUM']);
+  });
+
+  it('keeps a standard release with 67% coverage as NO_GO when signals are healthy', () => {
+    const result = evaluateRelease({ ...healthy, coverage: 67 });
+    expect(result.decision).toBe('NO_GO');
+    expect(result.reasons).toEqual(['COVERAGE_BELOW_MINIMUM']);
   });
 });
